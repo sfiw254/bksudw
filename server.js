@@ -7,11 +7,11 @@ let subs = fs.readFileSync('subs.json', 'utf8')
 let subs2 = fs.readFileSync('subs2.json', 'utf8')
 let history = {}
 
-app.use('/', express.static('public'))
-app.get('/slots', (req, res) => routeSlots(req, res))
-app.get('/sub', (req, res) => routeSub(req, res))
-app.get('/unsub', (req, res) => routeUnsub(req, res))
-app.get('/subs', (req, res) => routeSubs(req, res))
+app.use('/termini', express.static('public'))
+app.get('/termini/slots', (req, res) => routeSlots(req, res))
+app.get('/termini/sub', (req, res) => routeSub(req, res))
+app.get('/termini/unsub', (req, res) => routeUnsub(req, res))
+app.get('/termini/subs', (req, res) => routeSubs(req, res))
 
 app.listen(3000, () => {
   console.log(`Server is running on port 3000...`)

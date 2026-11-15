@@ -25,18 +25,18 @@ const PARAMS = new URLSearchParams(window.location.search)
 const PARAMS_ID = PARAMS.get('id')
 
 
-// fetch(`/slots?id=${PARAMS_ID}`, {
+// fetch(`https://proxy.cors.dev/https://mojtermin.mk/api/pp/resources/${PARAMS_ID}/slots_availability`, {
 //     signal: AbortSignal.timeout(4000),
 //     headers: {
 //       'Content-Type': 'application/json'
 //     }
 //   })
-fetch(`https://proxy.cors.dev/https://mojtermin.mk/api/pp/resources/${PARAMS_ID}/slots_availability`, {
-    signal: AbortSignal.timeout(4000),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
+fetch(`/termini/slots?id=${PARAMS_ID}`, {
+signal: AbortSignal.timeout(4000),
+headers: {
+'Content-Type': 'application/json'
+}
+})
   .then(res => res.json())
   .then(data => {
     const slots = PARSE_DATA(data.timeslots)
@@ -127,7 +127,7 @@ async function CLICK_SUB() {
   }
   try {
     const random = Math.random().toString().split('.')[1]
-    const res = await fetch(`/sub?id=${PARAMS_ID}&email=${email}&code=${random}`, {
+    const res = await fetch(`/termini/sub?id=${PARAMS_ID}&email=${email}&code=${random}`, {
       signal: AbortSignal.timeout(4000)
     })
     const text = await res.text()
