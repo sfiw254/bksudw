@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="mk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Воздушна Битка</title>
+  <style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    background-color: #111;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+    padding: 0;
+  }
+
+  h1 {
+    font-size: 20px;
+    padding: 8px 0;
+    text-align: center;
+    letter-spacing: 2px;
+    color: #88ccff;
+    text-shadow: 2px 2px 0px #000;
+  }
+
+  #ui-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #222;
+    border-bottom: 3px solid #555;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 10;
+  }
+
+  #score-display {
+    color: #00ff00;
+  }
+
+  #lives-display {
+    color: #ff3333;
+  }
+
+  #btn-fullscreen {
+    background: #444;
+    border: 1px solid #777;
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 5px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  canvas {
+    background: linear-gradient(to bottom, #1144aa 0%, #4488ff 70%, #88ccff 85%);
+    display: block;
+    width: 100%;
+    flex-grow: 1;
+    height: 0;
+    touch-action: none;
+  }
+
+  .controls-info {
+    width: 100%;
+    background: #141414;
+    padding: 15px 10px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+    font-size: 12px;
+    color: #777;
+    text-align: center;
+    border-top: 1px solid #222;
+  }
+
+  @media (min-width: 1024px) {
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    #btn-fullscreen {
+      display: none;
+    }
+
+    body {
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #ui-container {
+      width: 800px;
+      border: 4px solid #555;
+      border-bottom: none;
+    }
+
+    canvas {
+      width: 800px;
+      height: 500px;
+      flex-grow: 0;
+      border: 4px solid #555;
+    }
+
+    .controls-info {
+      display: none;
+    }
+  }
+  </style>
+</head>
+
+<body>
+  <h1>ВОЗДУШНА БИТКА</h1>
+  <div id="ui-container">
+    <div id="score-display">ПОЕНИ: 0</div>
+    <button id="btn-fullscreen" onclick="toggleFullScreen()">📱 ЦЕЛ ЕКРАН</button>
+    <div id="lives-display">ЖИВОТИ: ❤️❤️❤️</div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <div class="controls-info">
+    Контроли: <b>Влечи со прст (горе/долу/лево/десно)</b> | <b>Допри</b> за пукање
+  </div>
+  <script>
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log(err.message);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const scoreDisplay = document.getElementById("score-display");
+  const livesDisplay = document.getElementById("lives-display");
+
+  // === ПОДОБРЕН ЗВУЧЕН СИСТЕМ (Web Audio API - Погласни и пореални аркадни звуци) ===
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+  let masterGain = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new AudioContext();
+
+      // Компресор за погласен и почист звук без крчење на телефон
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, audioCtx.currentTime);
+      compressor.knee.setValueAtTime(10, audioCtx.currentTime);
+      compressor.ratio.setValueAtTime(8, audioCtx.currentTime);
+      compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+      compressor.release.setValueAtTime(0.15, audioCtx.currentTime);
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(1.6, audioCtx.currentTime); // Појачување на јачината
+
+      masterGain.connect(compressor);
+      compressor.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+  }
+
+  // 1. Митралез / Аркаден топ (комбинација од удар + ласер)
+  function playShootSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    // Висок аркаден тон
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = "sawtooth";
+    osc1.frequency.setValueAtTime(850, now);
+    osc1.frequency.exponentialRampToValueAtTime(110, now + 0.14);
+    gain1.gain.setValueAtTime(0.35, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    // Краток механички удар (punch)
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(220, now);
+    osc2.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+    gain2.gain.setValueAtTime(0.45, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+    osc1.connect(gain1);
+    osc2.connect(gain2);
+    gain1.connect(masterGain);
+    gain2.connect(masterGain);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.14);
+    osc2.stop(now + 0.08);
+  }
+
+  // 2. Реална аркадна експлозија (длабок бас удар + татнеж)
+  function playExplosionSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    // Длабок суб-бас удар (Boom)
+    const bassOsc = audioCtx.createOscillator();
+    const bassGain = audioCtx.createGain();
+    bassOsc.type = "sine";
+    bassOsc.frequency.setValueAtTime(140, now);
+    bassOsc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
+    bassGain.gain.setValueAtTime(0.75, now);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    bassOsc.connect(bassGain);
+    bassGain.connect(masterGain);
+    bassOsc.start(now);
+    bassOsc.stop(now + 0.45);
+
+    // Шум од експлозија и кршење метал
+    const duration = 0.5;
+    const bufferSize = audioCtx.sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.2));
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(1400, now);
+    filter.frequency.exponentialRampToValueAtTime(90, now + duration);
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.8, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noise.start(now);
+  }
+
+  // 3. Погодок во нашиот авион (метален удар + аларм пад)
+  function playHitSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.type = "sawtooth";
+    osc2.type = "square";
+
+    osc1.frequency.setValueAtTime(320, now);
+    osc1.frequency.linearRampToValueAtTime(75, now + 0.35);
+
+    osc2.frequency.setValueAtTime(310, now);
+    osc2.frequency.linearRampToValueAtTime(65, now + 0.35);
+
+    gain.gain.setValueAtTime(0.55, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(masterGain);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.35);
+    osc2.stop(now + 0.35);
+  }
+
+  // 4. Класична ретро мелодија за крај на играта
+  function playGameOverSound() {
+    if (!audioCtx) return;
+    const notes = new Array(330, 294, 262, 220, 165);
+    const durations = new Array(0.16, 0.16, 0.16, 0.22, 0.45);
+    let timeOffset = 0;
+
+    notes.forEach((freq, index) => {
+      const now = audioCtx.currentTime + timeOffset;
+      const dur = durations[index];
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, now);
+      if (index === notes.length - 1) {
+        osc.frequency.linearRampToValueAtTime(freq - 25, now + dur);
+      }
+
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + dur);
+
+      timeOffset += dur * 0.9;
+    });
+  }
+
+
+  // === ВАРИЈАБЛИ ЗА ИГРАТА ===
+  let score = 0,
+    lives = 3,
+    gameOver = false;
+
+  const keys = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    space: false,
+    spacePressed: false
+  };
+
+  const plane = {
+    x: 0,
+    y: 0,
+    width: 48,
+    height: 44,
+    speed: 6
+  };
+
+  let bullets = [];
+  let enemies = [];
+  let enemyBullets = [];
+  let particles = [];
+  let clouds = [];
+  let groundObjects = [];
+
+  let isDragging = false,
+    startTouchX = 0,
+    startTouchY = 0,
+    lastTouchX = 0,
+    lastTouchY = 0,
+    hasMoved = false;
+  let moveTouchId = null;
+
+  function resizeCanvas() {
+    canvas.width = canvas.clientWidth || 800;
+    canvas.height = canvas.clientHeight || 500;
+    plane.x = canvas.width / 2 - plane.width / 2;
+    plane.y = canvas.height - 90;
+    initEnvironment();
+  }
+
+  function initEnvironment() {
+    clouds = [];
+    groundObjects = [];
+
+    for (let i = 0; i < 6; i++) {
+      clouds.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 30 + 25,
+        speed: Math.random() * 1.5 + 2.5
+      });
+    }
+
+    for (let i = 0; i < 8; i++) {
+      spawnGroundObject(Math.random() * canvas.height);
+    }
+  }
+
+  function spawnGroundObject(startY) {
+    const types = ['island', 'boat', 'land_patch'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    groundObjects.push({
+      type: type,
+      x: Math.random() * (canvas.width - 80) + 40,
+      y: startY,
+      size: Math.random() * 35 + 30,
+      speed: 1.5
+    });
+  }
+
+  function clampPlane() {
+    if (plane.x < 0) plane.x = 0;
+    if (plane.x > canvas.width - plane.width) plane.x = canvas.width - plane.width;
+    if (plane.y < 0) plane.y = 0;
+    if (plane.y > canvas.height - plane.height) plane.y = canvas.height - plane.height;
+  }
+
+  // === КОНТРОЛИ СО ГЛУВЧЕ ===
+  canvas.addEventListener("mousemove", (e) => {
+    if (gameOver) return;
+    const rect = canvas.getBoundingClientRect();
+    plane.x = (e.clientX - rect.left) - plane.width / 2;
+    plane.y = (e.clientY - rect.top) - plane.height / 2;
+    clampPlane();
+  });
+
+  canvas.addEventListener("mousedown", (e) => {
+    initAudio();
+    if (gameOver) {
+      document.location.reload();
+      return;
+    }
+    if (e.button === 0) {
+      fireBullet();
+    }
+  });
+
+  // === КОНТРОЛИ СО ТАСТАТУРА ===
+  window.addEventListener("keydown", (e) => {
+    initAudio();
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = true;
+    if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.up = true;
+    if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.down = true;
+    if (e.key === " ") keys.space = true;
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
+    if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.up = false;
+    if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.down = false;
+    if (e.key === " ") {
+      keys.space = false;
+      keys.spacePressed = false;
+    }
+  });
+
+  // === КОНТРОЛИ ЗА НА ТЕЛЕФОН (TOUCH) ===
+  canvas.addEventListener("touchstart", (e) => {
+    initAudio();
+    if (gameOver) {
+      document.location.reload();
+      return;
+    }
+    const touches = e.changedTouches;
+    if (!isDragging) {
+      const touch = touches[0];
+      moveTouchId = touch.identifier;
+      isDragging = true;
+      hasMoved = false;
+      startTouchX = touch.clientX;
+      startTouchY = touch.clientY;
+      lastTouchX = startTouchX;
+      lastTouchY = startTouchY;
+    } else {
+      fireBullet();
+    }
+  }, { passive: true });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (!isDragging || gameOver) return;
+    let touch = null;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === moveTouchId) {
+        touch = e.touches[i];
+        break;
+      }
+    }
+    if (!touch) return;
+    const currentTouchX = touch.clientX;
+    const currentTouchY = touch.clientY;
+    if (Math.abs(currentTouchX - startTouchX) > 8 || Math.abs(currentTouchY - startTouchY) > 8) {
+      hasMoved = true;
+    }
+    plane.x += currentTouchX - lastTouchX;
+    plane.y += currentTouchY - lastTouchY;
+    clampPlane();
+    lastTouchX = currentTouchX;
+    lastTouchY = currentTouchY;
+  }, { passive: true });
+
+  canvas.addEventListener("touchend", (e) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === moveTouchId) {
+        if (!hasMoved) fireBullet();
+        isDragging = false;
+        hasMoved = false;
+        moveTouchId = null;
+        break;
+      }
+    }
+  }, { passive: true });
+
+  function fireBullet() {
+    if (!gameOver) {
+      playShootSound();
+      bullets.push({
+        x: plane.x + plane.width / 2 - 3,
+        y: plane.y,
+        width: 6,
+        height: 15,
+        speed: 9
+      });
+    }
+  }
+
+  function createExplosion(x, y, color) {
+    for (let i = 0; i < 15; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        radius: Math.random() * 3 + 1,
+        color: color,
+        speedX: (Math.random() - 0.5) * 6,
+        speedY: (Math.random() - 0.5) * 6,
+        alpha: 1,
+        decay: Math.random() * 0.03 + 0.02
+      });
+    }
+  }
+
+  function spawnEnemy() {
+    if (gameOver) return;
+    enemies.push({
+      x: Math.random() * (canvas.width - 45),
+      y: -40,
+      width: 42,
+      height: 36,
+      speedX: (Math.random() * 2 + 1) * (Math.random() < 0.5 ? 1 : -1),
+      speedY: Math.random() * 1.5 + 1.5,
+      shootTimer: Math.random() * 80 + 30
+    });
+    setTimeout(spawnEnemy, 1200);
+  }
+
+  function loseLife() {
+    lives--;
+    if (lives <= 0) {
+      livesDisplay.innerText = "ЖИВОТИ: ИЗГУБЕНИ";
+      gameOver = true;
+      playGameOverSound();
+    } else {
+      livesDisplay.innerText = "ЖИВОТИ: " + "❤️".repeat(lives);
+      playHitSound();
+    }
+  }
+
+  function update() {
+    if (gameOver) return;
+
+    if (keys.left) plane.x -= plane.speed;
+    if (keys.right) plane.x += plane.speed;
+    if (keys.up) plane.y -= plane.speed;
+    if (keys.down) plane.y += plane.speed;
+    clampPlane();
+
+    if (keys.space && !keys.spacePressed) {
+      fireBullet();
+      keys.spacePressed = true;
+    }
+
+    groundObjects.forEach(obj => {
+      obj.y += obj.speed;
+      if (obj.y - obj.size > canvas.height) {
+        obj.y = -obj.size - 20;
+        obj.x = Math.random() * (canvas.width - 80) + 40;
+      }
+    });
+
+    clouds.forEach(c => {
+      c.y += c.speed;
+      if (c.y - c.size > canvas.height) {
+        c.y = -c.size - 20;
+        c.x = Math.random() * canvas.width;
+      }
+    });
+
+    bullets.forEach((b, i) => {
+      b.y -= b.speed;
+      if (b.y < 0) bullets.splice(i, 1);
+    });
+
+    enemies.forEach((e, ei) => {
+      e.x += e.speedX;
+      e.y += e.speedY;
+
+      if (e.x <= 0 || e.x >= canvas.width - e.width) {
+        e.speedX *= -1;
+      }
+
+      e.shootTimer--;
+      if (e.shootTimer <= 0) {
+        enemyBullets.push({
+          x: e.x + e.width / 2 - 3,
+          y: e.y + e.height,
+          width: 6,
+          height: 12,
+          speed: 5
+        });
+        e.shootTimer = Math.random() * 110 + 70;
+      }
+
+      if (e.y > canvas.height) {
+        enemies.splice(ei, 1);
+      }
+
+      if (plane.x < e.x + e.width && plane.x + plane.width > e.x &&
+        plane.y < e.y + e.height && plane.y + plane.height > e.y) {
+        createExplosion(e.x + e.width / 2, e.y + e.height / 2, "#ff5500");
+        playExplosionSound();
+        enemies.splice(ei, 1);
+        loseLife();
+      }
+
+      bullets.forEach((b, bi) => {
+        if (b.x < e.x + e.width && b.x + b.width > e.x &&
+          b.y < e.y + e.height && b.y + b.height > e.y) {
+          createExplosion(e.x + e.width / 2, e.y + e.height / 2, "#ff5500");
+          playExplosionSound();
+          enemies.splice(ei, 1);
+          bullets.splice(bi, 1);
+          score += 10;
+          scoreDisplay.innerText = "ПОЕНИ: " + score;
+        }
+      });
+    });
+
+    enemyBullets.forEach((eb, ebi) => {
+      eb.y += eb.speed;
+      if (eb.y > canvas.height) enemyBullets.splice(ebi, 1);
+
+      if (eb.x < plane.x + plane.width && eb.x + eb.width > plane.x &&
+        eb.y < plane.y + plane.height && eb.y + eb.height > plane.y) {
+        createExplosion(plane.x + plane.width / 2, plane.y + plane.height / 2, "#ff0000");
+        enemyBullets.splice(ebi, 1);
+        loseLife();
+      }
+    });
+
+    particles.forEach((p, i) => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      p.alpha -= p.decay;
+      if (p.alpha <= 0) particles.splice(i, 1);
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#1565c0";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    groundObjects.forEach(obj => {
+      if (obj.type === 'island') {
+        ctx.fillStyle = "#e6c280";
+        ctx.beginPath();
+        ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#2e7d32";
+        ctx.beginPath();
+        ctx.arc(obj.x, obj.y, obj.size * 0.78, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obj.type === 'land_patch') {
+        ctx.fillStyle = "#388e3c";
+        ctx.beginPath();
+        ctx.ellipse(obj.x, obj.y, obj.size * 1.2, obj.size * 0.8, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#1b5e20";
+        ctx.beginPath();
+        ctx.arc(obj.x - 10, obj.y - 5, 8, 0, Math.PI * 2);
+        ctx.arc(obj.x + 12, obj.y + 6, 10, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obj.type === 'boat') {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.fillRect(obj.x - 4, obj.y + 15, 8, 18);
+        ctx.fillStyle = "#5d4037";
+        ctx.beginPath();
+        ctx.ellipse(obj.x, obj.y, 7, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#d7ccc8";
+        ctx.fillRect(obj.x - 3, obj.y - 4, 6, 10);
+      }
+    });
+
+    const cx = plane.x + plane.width / 2;
+    const cy = plane.y + plane.height / 2;
+    ctx.fillStyle = "#b0bec5";
+    ctx.beginPath();
+    ctx.moveTo(cx, plane.y + 10);
+    ctx.lineTo(plane.x, plane.y + 28);
+    ctx.lineTo(plane.x, plane.y + 33);
+    ctx.lineTo(cx, plane.y + 24);
+    ctx.lineTo(plane.x + plane.width, plane.y + 33);
+    ctx.lineTo(plane.x + plane.width, plane.y + 28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#d32f2f";
+    ctx.beginPath();
+    ctx.moveTo(cx, plane.y + 34);
+    ctx.lineTo(cx - 10, plane.y + plane.height);
+    ctx.lineTo(cx + 10, plane.y + plane.height);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#eceff1";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 6, plane.height / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0288d1";
+    ctx.beginPath();
+    ctx.ellipse(cx, plane.y + 16, 3.5, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffff00";
+    bullets.forEach(b => ctx.fillRect(b.x, b.y, b.width, b.height));
+
+    enemies.forEach(e => {
+      const ecx = e.x + e.width / 2;
+      ctx.fillStyle = "#d32f2f";
+      ctx.fillRect(e.x, e.y + 10, e.width, 8);
+      ctx.fillStyle = "#9a0007";
+      ctx.fillRect(ecx - 5, e.y, 10, e.height);
+      ctx.fillRect(ecx - 12, e.y, 24, 5);
+    });
+
+    ctx.fillStyle = "#ff1100";
+    enemyBullets.forEach(eb => {
+      ctx.beginPath();
+      ctx.arc(eb.x + 3, eb.y + 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    clouds.forEach(c => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size * 0.6, 0, Math.PI * 2);
+      ctx.arc(c.x + c.size * 0.5, c.y - 6, c.size * 0.7, 0, Math.PI * 2);
+      ctx.arc(c.x + c.size * 1.1, c.y, c.size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    particles.forEach(p => {
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    if (gameOver) {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ff0000";
+      ctx.font = "bold 30px 'Courier New'";
+      ctx.textAlign = "center";
+      ctx.fillText("КРАЈ НА ИГРАТА", canvas.width / 2, canvas.height / 2 - 20);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "16px 'Courier New'";
+      ctx.fillText("Кликнете или допрете за нова игра", canvas.width / 2, canvas.height / 2 + 30);
+    }
+  }
+
+  function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  window.addEventListener("load", () => {
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    spawnEnemy();
+    gameLoop();
+  });
+  </script>
+</body>
+
+</html>
