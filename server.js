@@ -407,7 +407,7 @@ function routeChatu(req, res) {
     }
   } catch (err) {
     console.log('routeChatu() err: ', err.code, err.message)
-}
+  }
 }
 
 function checkFollowed() {
@@ -421,12 +421,12 @@ function checkFollowed() {
         if (res.status == 200) {
           // console.log('mock notify: ', el)
           sendMaileroo('sfiw@proton.me', `${el} is online`, `${el} is online:
-          // https://chaturbate.com/${el}`)
+          https://chaturbate.com/${el}`)
           followed = followed.filter(elt => elt !== el)
           updateFollowed()
         }
       })
-      .catch(err => console.log('checkFollowed() err: ', err.code, err.message))
+      .catch(err => console.log(el, 'checkFollowed() err: ', err.status))
   })
 }
 
