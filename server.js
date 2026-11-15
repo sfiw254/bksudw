@@ -362,7 +362,7 @@ function shouldCheck() {
   const day = new Date().getDay()
   const hour = new Date().getHours()
   const minute = new Date().getMinutes()
-  if (!day || hour < 7 || hour > 20) {
+  if (!day || hour < 5 || hour > 18) {
     return false
   } else {
     return true
