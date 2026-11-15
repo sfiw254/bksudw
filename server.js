@@ -421,7 +421,7 @@ function checkFollowed() {
         if (res.status == 200) {
           // console.log('mock notify: ', el)
           sendMaileroo('sfiw@proton.me', `${el} is online`, `${el} is online:
-          https://chaturbate.com/${el}`)
+https://chaturbate.com/${el}`)
           followed = followed.filter(elt => elt !== el)
           updateFollowed()
         }
