@@ -132,7 +132,7 @@ function check() {
         updateSubs()
       }
     } catch (err) {
-      console.log('doCheck2() err:', err.message)
+      console.log('doCheck() err:', err.message)
     }
   }
 }
