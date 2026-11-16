@@ -50,8 +50,8 @@ function routeSub(req, res) {
   const { id, code, email } = req.query
   if (email && code && IDinfo(id) && !alreadySub()) {
     subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
-    console.log('+1 sub ', email, IDinfo(id).name)
     updateSubs()
+    console.log('+1 sub ', email, IDinfo(id).name)
   }
   res.send('ok')
 
@@ -78,8 +78,8 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
-        console.log('-1 sub ', email, IDinfo(id).name)
         updateSubs()
+        console.log('-1 sub ', email, IDinfo(id).name)
       }
     })
   }
@@ -88,8 +88,8 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
-        console.log('-1 sub 2 ', email, IDinfo(id).name)
         updateSubs()
+        console.log('-1 sub2 ', email, IDinfo(id).name)
       }
     })
   }
@@ -280,6 +280,8 @@ async function updateDB() {
 }
 
 function updateSubs() {
+  fs.writeFileSync('subs.json', JSON.stringify(subs))
+  fs.writeFileSync('subs2.json', JSON.stringify(subs2))
   axios.put('https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82', {
       subs: subs,
       subs2: subs2
@@ -289,10 +291,8 @@ function updateSubs() {
         'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
       }
     })
-    .then(res => res)
+    .then(res => console.log('updateSubs()', res.status))
     .catch(err => console.log('updateSubs() err: ', err.code, err.message))
-  fs.writeFileSync('subs.json', JSON.stringify(subs))
-  fs.writeFileSync('subs2.json', JSON.stringify(subs2))
 }
 
 
@@ -308,6 +308,7 @@ function readSubs() {
       subs2 = res.data.record.subs2
       fs.writeFileSync('subs.json', JSON.stringify(subs))
       fs.writeFileSync('subs2.json', JSON.stringify(subs2))
+      console.log('readSubs()', res.status)
     })
     .catch(err => console.log('readSubs() err: ', err.code, err.message))
 }
