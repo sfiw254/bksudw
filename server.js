@@ -114,7 +114,7 @@ function check() {
       return
     }
     index++
-    setTimeout(doCheck, 1200)
+    setTimeout(doCheck, 2000)
     try {
       const data = await getSlots(id)
       const name = data.name.slice(0, 60)
