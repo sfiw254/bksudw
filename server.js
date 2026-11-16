@@ -2,7 +2,7 @@ const fs = require('fs')
 const axios = require('axios')
 const express = require('express')
 const app = express()
-let db = fs.readFileSync('public/db.json', 'utf8')
+let db = JSON.parse(fs.readFileSync('public/db.json', 'utf8'))
 let subs = fs.readFileSync('subs.json', 'utf8')
 let subs2 = fs.readFileSync('subs2.json', 'utf8')
 let history = {}
@@ -50,6 +50,7 @@ function routeSub(req, res) {
   const { id, code, email } = req.query
   if (email && code && IDInfo(id) && !alreadySub()) {
     subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
+    console.log('+1 sub ', email, IDInfo(id).name)
     updateSubs()
   }
   res.send('ok')
@@ -77,6 +78,7 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
+        console.log('-1 sub ', email, IDInfo(id).name)
         updateSubs()
       }
     })
@@ -86,6 +88,7 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
+        console.log('-1 sub 2 ', email, IDInfo(id).name)
         updateSubs()
       }
     })
@@ -121,7 +124,6 @@ function check() {
           el.isAvailable ? counter++ : 0
         })
       }
-      console.log('termini check: ///////////........//////////')
       console.log(counter, name)
       if (counter > 1) {
         notify(id, name)
@@ -152,7 +154,7 @@ function check2() {
       return
     }
     index++
-    setTimeout(doCheck, 10 * 60 * 1000)
+    setTimeout(doCheck, 1000 * 5)
     try {
       const data = await getSlots(id)
       const name = data.name.slice(0, 60)
@@ -162,6 +164,7 @@ function check2() {
           el.isAvailable ? counter++ : 0
         })
       }
+      console.log(counter, name, '2')
       if (counter == 0) {
         subs[id] = subs2[id]
         delete subs2[id]
@@ -193,13 +196,13 @@ function notify(id, name) {
   subs[id].forEach(el => {
     const subject = `${name} има нови термини`
     const plain = `${name} има нови термини:
-https://server-sfiw.onrender.com/slots.html?id=${id}
+https://server-sfiw.onrender.com/termini/slots.html?id=${id}
 
 
 За да го исклучите известувањето:
-https://server-sfiw.onrender.com/unsub?id=${id}&email=${el.email}&code=${el.code}`
+https://server-sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=${el.code}`
     sendMaileroo(el.email, subject, plain)
-    console.log('mock send email ', el.email, subject)
+    // console.log('mock send email ', el.email, subject)
   })
 }
 
@@ -317,7 +320,9 @@ function IDInfo(id) {
         name: el.name,
         specialty: el.specialty,
         location: el.location,
-        hospital: el.hospital
+        hospital: el.hospital,
+        availability: el.availability,
+        lastChecked: el.lastChecked
       }
     }
   })
@@ -411,7 +416,7 @@ function routeChatu(req, res) {
 }
 
 function checkFollowed() {
-  console.log('chatu: ____________________')
+  console.log('chatu: __________( • )( • )__________')
   followed.forEach(el => {
     axios(`https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}`, {
         signal: AbortSignal.timeout(4000)
@@ -419,9 +424,9 @@ function checkFollowed() {
       .then(res => {
         console.log(el, res.status)
         if (res.status == 200) {
-          // console.log('mock notify: ', el)
           sendMaileroo('sfiw@proton.me', `${el} is online`, `${el} is online:
 https://chaturbate.com/${el}`)
+          // console.log('mock notify: ', el)
           followed = followed.filter(elt => elt !== el)
           updateFollowed()
         }
