@@ -39,7 +39,7 @@ function routeSubs(req, res) {
     subs[property].forEach(el => {
       if (el.email == req.query.email) {
         let url = `https://server-sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
-        list.unshift({ name: IDInfo(property).name, url: url })
+        list.unshift({ name: IDinfo(property).name, url: url })
       }
     })
   }
@@ -48,9 +48,9 @@ function routeSubs(req, res) {
 
 function routeSub(req, res) {
   const { id, code, email } = req.query
-  if (email && code && IDInfo(id) && !alreadySub()) {
+  if (email && code && IDinfo(id) && !alreadySub()) {
     subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
-    console.log('+1 sub ', email, IDInfo(id).name)
+    console.log('+1 sub ', email, IDinfo(id).name)
     updateSubs()
   }
   res.send('ok')
@@ -78,7 +78,7 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
-        console.log('-1 sub ', email, IDInfo(id).name)
+        console.log('-1 sub ', email, IDinfo(id).name)
         updateSubs()
       }
     })
@@ -88,7 +88,7 @@ function routeUnsub(req, res) {
       if (el.email == email && el.code == code) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
-        console.log('-1 sub 2 ', email, IDInfo(id).name)
+        console.log('-1 sub 2 ', email, IDinfo(id).name)
         updateSubs()
       }
     })
@@ -132,7 +132,7 @@ function check() {
         updateSubs()
       }
     } catch (err) {
-      console.log('doCheck() err: ', err.code, err.message)
+      console.log('doCheck2() err:', err.message)
     }
   }
 }
@@ -140,9 +140,9 @@ function check() {
 function check2() {
   const IDs = Object.keys(subs2)
   let index = 0
-  IDs.length && shouldCheck() ? doCheck() : setTimeout(check2, 1000)
+  IDs.length && shouldCheck() ? doCheck2() : setTimeout(check2, 1000)
 
-  async function doCheck() {
+  async function doCheck2() {
     if (index == IDs.length) {
       check2()
       return
@@ -150,11 +150,11 @@ function check2() {
     const id = IDs[index]
     if (!subs2[id]) {
       index++
-      doCheck()
+      doCheck2()
       return
     }
     index++
-    setTimeout(doCheck, 1000 * 5)
+    setTimeout(doCheck2, 1000 * 60 * 10)
     try {
       const data = await getSlots(id)
       const name = data.name.slice(0, 60)
@@ -171,7 +171,7 @@ function check2() {
         updateSubs()
       }
     } catch (err) {
-      console.log('doCheck2() err: ', err.code, err.message)
+      console.log('doCheck2() err:', err.message)
     }
   }
 }
@@ -312,7 +312,7 @@ function readSubs() {
     .catch(err => console.log('readSubs() err: ', err.code, err.message))
 }
 
-function IDInfo(id) {
+function IDinfo(id) {
   let info
   db.forEach(el => {
     if (el.id == id) {
@@ -367,7 +367,7 @@ function shouldCheck() {
   const day = new Date().getDay()
   const hour = new Date().getHours()
   const minute = new Date().getMinutes()
-  if (!day || hour < 5 || hour > 18) {
+  if (!day || hour < 6 || hour > 19) {
     return false
   } else {
     return true
