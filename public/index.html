@@ -22,12 +22,6 @@ const INPUT = document.querySelector('input')
 let DB, TIMEOUT_SEARCH
 
 
-// fetch('/db', {
-//     signal: AbortSignal.timeout(4000),
-//     headers: {
-//       'Content-Type': 'application/json'
-//     }
-//   })
 fetch('./db.json', {
     signal: AbortSignal.timeout(4000),
     headers: {
