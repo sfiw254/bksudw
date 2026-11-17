@@ -417,7 +417,6 @@ function routeChatu(req, res) {
 }
 
 function checkFollowed() {
-  console.log('chatu: __________( • )( • )__________')
   followed.forEach(el => {
     axios(`https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}`, {
         signal: AbortSignal.timeout(4000)
