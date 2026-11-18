@@ -4,7 +4,79 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
+  <title>Термини</title>
+  <style>
+  body {
+    max-width: 800px;
+    overflow-y: scroll;
+    margin: auto;
+    padding: .75rem;
+    font-size: .9rem;
+    font-family: arial;
+  }
+
+  .disclaimer {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-bottom: 1px solid #ffecb5;
+    padding: 10px 20px;
+    margin-bottom: .75rem;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .sub {
+    margin-bottom: .75rem;
+    text-decoration: underline;
+    cursor: pointer;
+    color: green;
+  }
+
+  .slots {
+    margin-top: .75rem;
+  }
+
+  .date {
+    margin-bottom: 2rem;
+    border: .1rem solid gray;
+  }
+
+  .date .title {
+    padding: .25rem;
+    background-color: gray;
+    color: white;
+  }
+
+  .slot {
+    display: inline-block;
+    width: 2.25rem;
+    margin: .25rem;
+    padding: .15rem;
+    border-radius: .5rem;
+    color: white;
+    text-align: center;
+  }
+
+  .slot.available {
+    background-color: #47a347;
+  }
+
+  .slot.limited {
+    background-color: #d4bb00;
+  }
+
+  .slot.taken {
+    background-color: #ff4242;
+  }
+
+  .hide {
+    display: none;
+  }
+  </style>
 </head>
 
 <body>
@@ -32,11 +104,11 @@ const PARAMS_ID = PARAMS.get('id')
 //     }
 //   })
 fetch(`/termini/slots?id=${PARAMS_ID}`, {
-signal: AbortSignal.timeout(4000),
-headers: {
-'Content-Type': 'application/json'
-}
-})
+    signal: AbortSignal.timeout(4000),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
   .then(res => res.json())
   .then(data => {
     const slots = PARSE_DATA(data.timeslots)
@@ -169,75 +241,3 @@ function FORMAT_DAY(number) {
   return day
 }
 </script>
-<style>
-body {
-  max-width: 800px;
-  overflow-y: scroll;
-  margin: auto;
-  padding: .75rem;
-  font-size: .9rem;
-  font-family: arial;
-}
-
-.disclaimer {
-  background-color: #fff3cd;
-  color: #664d03;
-  border-bottom: 1px solid #ffecb5;
-  padding: 10px 20px;
-  margin-bottom: .75rem;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.4;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.sub {
-  margin-bottom: .75rem;
-  text-decoration: underline;
-  cursor: pointer;
-  color: green;
-}
-
-.slots {
-  margin-top: .75rem;
-}
-
-.date {
-  margin-bottom: 2rem;
-  border: .1rem solid gray;
-}
-
-.date .title {
-  padding: .25rem;
-  background-color: gray;
-  color: white;
-}
-
-.slot {
-  display: inline-block;
-  width: 2.25rem;
-  margin: .25rem;
-  padding: .15rem;
-  border-radius: .5rem;
-  color: white;
-  text-align: center;
-}
-
-.slot.available {
-  background-color: #47a347;
-}
-
-.slot.limited {
-  background-color: #d4bb00;
-}
-
-.slot.taken {
-  background-color: #ff4242;
-}
-
-.hide {
-  display: none;
-}
-</style>

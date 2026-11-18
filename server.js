@@ -375,13 +375,13 @@ function shouldCheck() {
 }
 
 setInterval(function() {
-  axios('https://server-sfiw.onrender.com/sub')
+  axios('https://server-sfiw.onrender.com')
     .then(res => res)
     .catch(err => err)
 }, 454938)
 
 setInterval(function() {
-  axios('https://server-sfiw.onrender.com/unsub')
+  axios('https://server-sfiw.onrender.com')
     .then(res => res)
     .catch(err => err)
 }, 834782)
@@ -395,11 +395,12 @@ setInterval(function() {
 
 
 ///////////////////////////////////////////////////////chatu
-let users, followed
-readFollowed()
-
 app.use(express.static('other'))
+
+let users, followed
 app.get('/chatu', (req, res) => routeChatu(req, res))
+
+readFollowed()
 
 function routeChatu(req, res) {
   try {
