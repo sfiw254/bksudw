@@ -11,12 +11,11 @@ app.use('/termini', express.static('public'))
 app.get('/termini/slots', (req, res) => routeSlots(req, res))
 app.get('/termini/sub', (req, res) => routeSub(req, res))
 app.get('/termini/unsub', (req, res) => routeUnsub(req, res))
-app.get('/termini/subs', (req, res) => routeSubs(req, res))
 
 app.listen(3000, () => {
   console.log(`Server is running on port 3000...`)
-  readSubs()
   updateDB()
+  readSubs()
   check()
   check2()
 })
@@ -26,24 +25,8 @@ async function routeSlots(req, res) {
     const data = await getSlots(req.query.id)
     data ? res.send(data) : res.status(400).send()
   } catch (err) {
-    console.log('routeSlots() err: ', err.code, err.message)
+    console.log('ERR routeSlots', err.status, err.message)
   }
-}
-
-function routeSubs(req, res) {
-  let list = []
-  if (!req.query.email) {
-    return
-  }
-  for (property in subs) {
-    subs[property].forEach(el => {
-      if (el.email == req.query.email) {
-        let url = `https://server-sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
-        list.unshift({ name: IDinfo(property).name, url: url })
-      }
-    })
-  }
-  res.send(list)
 }
 
 function routeSub(req, res) {
@@ -51,7 +34,7 @@ function routeSub(req, res) {
   if (email && code && IDinfo(id) && !alreadySub()) {
     subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
     updateSubs()
-    console.log('+1 sub ', email, IDinfo(id).name)
+    console.log('+1 sub ', IDinfo(id).name, email)
   }
   res.send('ok')
 
@@ -79,7 +62,7 @@ function routeUnsub(req, res) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
         updateSubs()
-        console.log('-1 sub ', email, IDinfo(id).name)
+        console.log('-1 sub ', IDinfo(id).name, email)
       }
     })
   }
@@ -89,7 +72,7 @@ function routeUnsub(req, res) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
         updateSubs()
-        console.log('-1 sub2 ', email, IDinfo(id).name)
+        console.log('-1 sub', IDinfo(id).name, email)
       }
     })
   }
@@ -132,7 +115,7 @@ function check() {
         updateSubs()
       }
     } catch (err) {
-      console.log('doCheck() err:', err.message)
+      console.log('ERR doCheck', err.status, err.message)
     }
   }
 }
@@ -171,7 +154,7 @@ function check2() {
         updateSubs()
       }
     } catch (err) {
-      console.log('doCheck2() err:', err.message)
+      console.log('ERR doCheck2', err.status, err.message)
     }
   }
 }
@@ -202,7 +185,7 @@ https://server-sfiw.onrender.com/termini/slots.html?id=${id}
 За да го исклучите известувањето:
 https://server-sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=${el.code}`
     sendMaileroo(el.email, subject, plain)
-    // console.log('mock send email ', el.email, subject)
+    // console.log('mock send email ', subject,el.email)
   })
 }
 
@@ -225,8 +208,24 @@ function sendMaileroo(to, subject, plain) {
         "X-Api-Key": '096308984c35ee8ed28cb5c34ecd5d34f71ce1fb522d1cf282d064e9ec9cab6f'
       }
     })
-    .then(res => console.log('maileroo ok: ', res.status))
-    .catch(err => console.log('maileroo err: ', err))
+    .then(res => console.log('maileroo', res.status))
+    .catch(err => console.log('ERR maileroo ', err.status, err.message))
+}
+
+function filterSubs(req, res) {
+  let list = []
+  if (!req.query.email) {
+    return
+  }
+  for (property in subs) {
+    subs[property].forEach(el => {
+      if (el.email == req.query.email) {
+        let url = `https://server-sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
+        list.unshift({ name: IDinfo(property).name, url: url })
+      }
+    })
+  }
+  res.send(list)
 }
 
 async function updateDB() {
@@ -275,7 +274,7 @@ async function updateDB() {
     db = [...newDb]
     fs.writeFileSync('public/db.json', JSON.stringify(db))
   } catch (err) {
-    console.log('updateDB() err: ', err.code, err.message)
+    console.log('ERR updateDB', err.status, err.message)
   }
 }
 
@@ -291,8 +290,8 @@ function updateSubs() {
         'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
       }
     })
-    .then(res => console.log('updateSubs()', res.status))
-    .catch(err => console.log('updateSubs() err: ', err.code, err.message))
+    .then(res => console.log('updateSubs', res.status))
+    .catch(err => console.log('ERR updateSubs', err.status, err.message))
 }
 
 
@@ -308,9 +307,9 @@ function readSubs() {
       subs2 = res.data.record.subs2
       fs.writeFileSync('subs.json', JSON.stringify(subs))
       fs.writeFileSync('subs2.json', JSON.stringify(subs2))
-      console.log('readSubs()', res.status)
+      console.log('readSubs', res.status)
     })
-    .catch(err => console.log('readSubs() err: ', err.code, err.message))
+    .catch(err => console.log('ERR readSubs', err.status, err.message))
 }
 
 function IDinfo(id) {
@@ -409,10 +408,10 @@ function routeChatu(req, res) {
       followed = JSON.parse(req.query.data).followed
       res.send(followed)
     } else {
-      res.sendFile(__dirname + '/other/chatu.html')
+      res.send('u lost?')
     }
   } catch (err) {
-    console.log('routeChatu() err: ', err.code, err.message)
+    console.log('ERR routeChatu', err.status, err.message)
   }
 }
 
@@ -426,12 +425,12 @@ function checkFollowed() {
         if (res.status == 200) {
           sendMaileroo('sfiw@proton.me', `${el} is online`, `${el} is online:
 https://chaturbate.com/${el}`)
-          // console.log('mock notify: ', el)
+          // console.log('mock notify', el)
           followed = followed.filter(elt => elt !== el)
           updateFollowed()
         }
       })
-      .catch(err => console.log(el, 'checkFollowed() err: ', err.status))
+      .catch(err => console.log('ERR checkFollowed', err.status, err.message))
   })
 }
 
@@ -448,7 +447,7 @@ function readFollowed() {
       checkFollowed()
       setInterval(checkFollowed, 1000 * 60)
     })
-    .catch(err => console.log('readFollowed() err: ', err.code, err.message))
+    .catch(err => console.log('ERR readFollowed', err.status, err.message))
 }
 
 function updateFollowed() {
@@ -462,5 +461,5 @@ function updateFollowed() {
       }
     })
     .then(res => res)
-    .catch(err => console.log('readFollowed() err: ', err.code, err.message))
+    .catch(err => console.log('ERR readFollowed', err.status, err.message))
 }
