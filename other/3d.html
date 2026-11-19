@@ -6,7 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>3D Dark Showroom</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
     html, body {
       width: 100%; height: 100%;
       background: #131314;
@@ -14,6 +19,7 @@
       cursor: default;
       touch-action: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
       user-select: none;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #e3e3e3;
@@ -36,12 +42,19 @@
       align-items: center;
       justify-content: center;
       z-index: 20;
-      transition: background 0.15s, border-color 0.15s;
+      opacity: 0.32;
+      transition: opacity 0.18s ease, background 0.15s, border-color 0.15s, color 0.15s;
     }
-    .nav-arrow:hover {
-      background: #2b2d2f;
-      border-color: #8ab4f8;
-      color: #8ab4f8;
+    @media (hover: hover) {
+      .nav-arrow:hover {
+        opacity: 0.78;
+        background: #2b2d2f;
+        border-color: #8ab4f8;
+        color: #8ab4f8;
+      }
+    }
+    .nav-arrow:active {
+      opacity: 0.78;
     }
     #prevModelBig { left: 22px; }
     #nextModelBig { right: 22px; }
@@ -63,6 +76,18 @@
       flex-wrap: wrap;
       justify-content: center;
       max-width: 96vw;
+      opacity: 0.32;
+      transition: opacity 0.18s ease;
+    }
+    @media (hover: hover) {
+      .bottom-bar:hover,
+      .bottom-bar:focus-within {
+        opacity: 0.78;
+      }
+    }
+
+    .bar-toggle {
+      display: none;
     }
 
     .bar-group {
@@ -86,6 +111,7 @@
       padding: 0 10px;
       border-radius: 14px;
       font-size: 12px;
+      font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -138,17 +164,10 @@
       color: #e3e3e3;
     }
 
-    .hdr-text {
-      font-size: 12px;
-      color: #c4c7c5;
-      min-width: 126px;
-      text-align: center;
-      white-space: nowrap;
-    }
-
     .ctrl-label {
       font-size: 12px;
-      color: #c4c7c5;
+      font-weight: 500;
+      color: #e3e3e3;
       white-space: nowrap;
     }
 
@@ -179,6 +198,7 @@
       align-items: center;
       gap: 6px;
       font-size: 12px;
+      font-weight: 500;
       color: #e3e3e3;
       cursor: pointer;
       white-space: nowrap;
@@ -224,6 +244,56 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    @media (max-width: 768px), (pointer: coarse) {
+      .bottom-bar {
+        bottom: 48px;
+        opacity: 0.32;
+        transition: none;
+        padding: 7px 12px;
+        gap: 8px;
+      }
+      .bottom-bar.expanded {
+        opacity: 0.78;
+        transition: opacity 0.18s ease;
+        padding: 10px 14px;
+      }
+      .bar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 34px;
+        height: 14px;
+        background: #1e1f20;
+        border: 1px solid #333537;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+        color: #c4c7c5;
+        font-size: 9px;
+        cursor: pointer;
+      }
+      .bottom-bar.expanded .bar-toggle {
+        display: none;
+      }
+      .bottom-bar:not(.expanded) > .bar-group:not(:first-of-type),
+      .bottom-bar:not(.expanded) > .divider {
+        display: none;
+      }
+      .bottom-bar:not(.expanded) > .bar-group:first-of-type {
+        pointer-events: none;
+      }
+      .nav-arrow {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+      }
+      #prevModelBig { left: 12px; }
+      #nextModelBig { right: 12px; }
+    }
   </style>
 </head>
 
@@ -234,7 +304,8 @@
   </div>
   <button id="prevModelBig" class="nav-arrow" title="Previous Model">&#10094;</button>
   <button id="nextModelBig" class="nav-arrow" title="Next Model">&#10095;</button>
-  <div class="bottom-bar">
+  <div id="bottomBar" class="bottom-bar">
+    <button id="barToggle" class="bar-toggle" title="Expand Controls">&#9650;</button>
     <div class="bar-group">
       <button id="prevModelSm" class="btn-sm icon-btn" title="Previous Model">&#10094;</button>
       <select id="modelSelect" class="model-select" title="Select 3D Model"></select>
@@ -243,7 +314,7 @@
     <div class="divider"></div>
     <div class="bar-group">
       <button id="prevHdr" class="btn-sm icon-btn" title="Previous Lighting">&#10094;</button>
-      <span id="hdrLabel" class="hdr-text">Studio Soft (Default)</span>
+      <select id="hdrSelect" class="model-select" title="Select Lighting"></select>
       <button id="nextHdr" class="btn-sm icon-btn" title="Next Lighting">&#10095;</button>
     </div>
     <div class="divider"></div>
@@ -254,7 +325,7 @@
     <div class="divider"></div>
     <div class="bar-group">
       <button id="autoRotBtn" class="btn-sm active" title="Toggle Auto Rotation">Rot</button>
-      <input type="range" id="rotSpeedSlider" min="0" max="0.43" step="0.005" value="0.075" title="Rotation Speed">
+      <input type="range" id="rotSpeedSlider" min="0.075" max="0.65" step="0.005" value="0.075" title="Rotation Speed">
     </div>
     <div class="divider"></div>
     <div class="bar-group">
@@ -321,6 +392,40 @@
     const loaderText = document.getElementById('loaderText');
     const realismChk = document.getElementById('realismChk');
     const shadowLiftSlider = document.getElementById('shadowLiftSlider');
+    const bottomBar = document.getElementById('bottomBar');
+    const barToggle = document.getElementById('barToggle');
+
+    const isMobileQuery = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+
+    bottomBar.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
+    function expandMobileBar(e) {
+      if (!isMobileQuery.matches) return;
+      if (!bottomBar.classList.contains('expanded')) {
+        e.preventDefault();
+        e.stopPropagation();
+        bottomBar.classList.add('expanded');
+      }
+    }
+
+    bottomBar.addEventListener('click', expandMobileBar, true);
+    barToggle.addEventListener('click', (e) => {
+      if (!isMobileQuery.matches) return;
+      e.preventDefault();
+      e.stopPropagation();
+      bottomBar.classList.add('expanded');
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+      if (isMobileQuery.matches && bottomBar.classList.contains('expanded')) {
+        if (!bottomBar.contains(e.target)) {
+          bottomBar.classList.remove('expanded');
+        }
+      }
+    });
+
     let isRealism = realismChk.checked;
     let shadowLift = parseFloat(shadowLiftSlider.value);
 
@@ -384,7 +489,6 @@
 
     const roomEnvRT = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04);
 
-    // Soft contact shadow plane beneath model
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = 256;
     shadowCanvas.height = 256;
@@ -405,7 +509,6 @@
     contactShadowPlane.position.y = -46.5;
     contactShadowPlane.visible = isRealism;
 
-    // Real-time soft shadow catcher plane
     const shadowCatcher = new THREE.Mesh(
       new THREE.PlaneGeometry(320, 320),
       new THREE.ShadowMaterial({ opacity: 0.38 })
@@ -415,7 +518,6 @@
     shadowCatcher.receiveShadow = true;
     shadowCatcher.visible = isRealism;
 
-    // Presets from original code (Standard Mode)
     const standardPresets = [{
         name: 'Studio Soft (Default)',
         useRoomEnv: false,
@@ -498,7 +600,6 @@
       }
     ];
 
-    // Presets from v2 code (Studio Realism Mode)
     const realismPresets = [{
         name: 'Studio Soft (Default)',
         useRoomEnv: true,
@@ -576,7 +677,6 @@
       }
     ];
 
-    // Pre-cache all PMREM environment textures so switching presets or realism never stalls
     const envRTCache = { standard: [], realism: [] };
 
     function buildEnvCacheForList(list, targetArray) {
@@ -604,18 +704,30 @@
     buildEnvCacheForList(realismPresets, envRTCache.realism);
 
     let currentHdrIdx = 0;
+    const hdrSelect = document.getElementById('hdrSelect');
 
     function getActivePresets() {
       return isRealism ? realismPresets : standardPresets;
+    }
+
+    function rebuildHdrDropdown() {
+      const presets = getActivePresets();
+      hdrSelect.innerHTML = '';
+      presets.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = p.name;
+        hdrSelect.appendChild(opt);
+      });
+      hdrSelect.value = currentHdrIdx;
     }
 
     function applyHdrPreset(idx) {
       const presets = getActivePresets();
       currentHdrIdx = (idx + presets.length) % presets.length;
       const p = presets[currentHdrIdx];
-      document.getElementById('hdrLabel').textContent = p.name;
+      hdrSelect.value = currentHdrIdx;
 
-      // Exposure slider: at 0 leaves everything 100% untouched; >0 brightens shadows, <0 deepens shadows & occlusion
       const lift = isRealism ? shadowLift : 0;
 
       if (lift >= 0) {
@@ -633,7 +745,7 @@
         shadowCatcher.material.opacity = 0.38;
         contactShadowPlane.material.opacity = 1.0;
       } else {
-        const dark = -lift; // 0 to 1
+        const dark = -lift;
         renderer.toneMappingExposure = Math.max(0.55, p.exposure - dark * 0.32);
         hemiLight.color.setHex(p.hemi[0]);
         hemiLight.groundColor.setHex(p.hemi[1]);
@@ -806,6 +918,29 @@
       mixer.update(0);
     });
 
+    let zoomZ = 105;
+    let panX = 0;
+    let panY = 0;
+
+    function resetModelState() {
+      zoomZ = 105;
+      panX = 0;
+      panY = 0;
+
+      shadowLift = 0;
+      shadowLiftSlider.value = 0;
+      applyHdrPreset(currentHdrIdx);
+
+      animPlaying = true;
+      animSlider.value = 0;
+      if (mixer) {
+        animActions.forEach((act) => {
+          act.time = 0;
+        });
+        mixer.update(0);
+      }
+    }
+
     function executeLoadModel(idx, token) {
       const item = models[idx];
       setLoader('Loading ' + item.name + '...');
@@ -825,6 +960,8 @@
             animDuration = 0;
           }
 
+          resetModelState();
+
           const root = gltf.scene;
           const box = new THREE.Box3().setFromObject(root);
           const size = new THREE.Vector3();
@@ -839,7 +976,6 @@
           root.position.sub(center);
           root.position.y += 12;
 
-          // Position soft floor & contact shadow directly at bottom of the model
           const finalBox = new THREE.Box3().setFromObject(root);
           const bottomY = finalBox.min.y;
           contactShadowPlane.position.y = bottomY - 0.15;
@@ -934,7 +1070,10 @@
 
     modelSelect.addEventListener('change', (e) => {
       loadModel(parseInt(e.target.value, 10), true);
-      modelSelect.blur();
+    });
+
+    hdrSelect.addEventListener('change', (e) => {
+      applyHdrPreset(parseInt(e.target.value, 10));
     });
 
     document.getElementById('prevModelBig').addEventListener('click', () => loadModel(currentModelIdx - 1));
@@ -965,11 +1104,10 @@
     let previousY = 0;
     let yaw = 30;
     let pitch = -14;
-    let zoomZ = 105;
-    let panX = 0;
-    let panY = 0;
     let initialPinchDistance = 0;
     let initialZoomZ = 105;
+    let prevTwoFingerMidX = 0;
+    let prevTwoFingerMidY = 0;
 
     const minZoom = -450;
     const maxZoom = 290;
@@ -1039,6 +1177,9 @@
     const canvas = renderer.domElement;
 
     canvas.addEventListener('mousedown', (e) => {
+      if (document.activeElement && bottomBar.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
       if (e.button === 0) {
         isOrbiting = true;
         previousX = e.clientX;
@@ -1089,16 +1230,30 @@
       return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
     }
 
+    function getTouchMidpoint(t) {
+      const t0 = t.item(0);
+      const t1 = t.item(1);
+      return {
+        x: (t0.clientX + t1.clientX) * 0.5,
+        y: (t0.clientY + t1.clientY) * 0.5
+      };
+    }
+
     canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         const t0 = e.touches.item(0);
         isOrbiting = true;
+        isPanning = false;
         previousX = t0.clientX;
         previousY = t0.clientY;
       } else if (e.touches.length === 2) {
         isOrbiting = false;
+        isPanning = true;
         initialPinchDistance = getTouchDistance(e.touches);
         initialZoomZ = zoomZ;
+        const mid = getTouchMidpoint(e.touches);
+        prevTwoFingerMidX = mid.x;
+        prevTwoFingerMidY = mid.y;
       }
     }, { passive: false });
 
@@ -1111,23 +1266,34 @@
         pitch = Math.max(-85, Math.min(85, pitch - (t0.clientY - previousY) * 0.45 * precision));
         previousX = t0.clientX;
         previousY = t0.clientY;
-      } else if (e.touches.length === 2 && initialPinchDistance > 0) {
-        zoomZ = Math.max(minZoom, Math.min(maxZoom, initialZoomZ + (getTouchDistance(e.touches) - initialPinchDistance) * 0.55));
+      } else if (e.touches.length === 2) {
+        const precision = getZoomPrecisionFactor();
+        if (initialPinchDistance > 0) {
+          zoomZ = Math.max(minZoom, Math.min(maxZoom, initialZoomZ + (getTouchDistance(e.touches) - initialPinchDistance) * 0.55));
+        }
+        const mid = getTouchMidpoint(e.touches);
+        panX += (mid.x - prevTwoFingerMidX) * 0.14 * precision;
+        panY += (mid.y - prevTwoFingerMidY) * 0.14 * precision;
+        prevTwoFingerMidX = mid.x;
+        prevTwoFingerMidY = mid.y;
       }
     }, { passive: false });
 
     canvas.addEventListener('touchend', (e) => {
       if (e.touches.length === 0) {
         isOrbiting = false;
+        isPanning = false;
       } else if (e.touches.length === 1) {
         const t0 = e.touches.item(0);
         isOrbiting = true;
+        isPanning = false;
         previousX = t0.clientX;
         previousY = t0.clientY;
       }
     });
 
     rebuildModelDropdown();
+    rebuildHdrDropdown();
     applyRealismState();
     loadModel(0, true);
   }
