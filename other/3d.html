@@ -19,8 +19,8 @@
       cursor: default;
       touch-action: none;
       -webkit-user-select: none;
-      -webkit-touch-callout: none;
       user-select: none;
+      -webkit-touch-callout: none;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #e3e3e3;
     }
@@ -82,56 +82,6 @@
 
     .bar-toggle {
       display: none;
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 34px;
-      height: 14px;
-      border-radius: 8px 8px 0 0;
-      background: #1e1f20;
-      border: 1px solid #333537;
-      border-bottom: none;
-      color: #e3e3e3;
-      font-size: 9px;
-      line-height: 1;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      pointer-events: none;
-    }
-
-    @media (max-width: 768px), (pointer: coarse) {
-      .bottom-bar {
-        bottom: 48px;
-        opacity: 0.32;
-        transition: none;
-      }
-      .bottom-bar:hover,
-      .bottom-bar:focus-within {
-        opacity: 0.32;
-      }
-      .bottom-bar.expanded {
-        opacity: 0.78;
-        transition: opacity 0.15s;
-      }
-      .bottom-bar.expanded:hover,
-      .bottom-bar.expanded:focus-within {
-        opacity: 0.78;
-      }
-      .bar-toggle {
-        display: flex;
-      }
-      .bottom-bar.expanded .bar-toggle {
-        display: none;
-      }
-      .bottom-bar:not(.expanded) .bar-group:not(.primary-group),
-      .bottom-bar:not(.expanded) .divider {
-        display: none;
-      }
-      .bottom-bar:not(.expanded) .primary-group * {
-        pointer-events: none;
-      }
     }
 
     .bar-group {
@@ -185,22 +135,30 @@
     }
 
     .model-select {
-      background: #282a2c;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-color: #282a2c;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23e3e3e3' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 9px 5px;
       border: 1px solid #3c4043;
       color: #e3e3e3;
       height: 28px;
-      padding: 0 10px;
+      padding: 0 28px 0 12px;
       border-radius: 14px;
       font-size: 12px;
       font-weight: 500;
-      min-width: 148px;
+      min-width: 156px;
       text-align: center;
+      text-align-last: center;
       cursor: pointer;
       outline: none;
       transition: 0.15s;
     }
     .model-select:hover, .model-select:focus {
-      background: #35373a;
+      background-color: #35373a;
       border-color: #8ab4f8;
     }
     .model-select option {
@@ -288,6 +246,59 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    @media (max-width: 768px), (pointer: coarse) {
+      .bottom-bar {
+        bottom: 48px;
+        opacity: 0.32;
+        transition: none;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .bottom-bar:hover,
+      .bottom-bar:focus-within {
+        opacity: 0.32;
+      }
+      .bottom-bar.expanded {
+        opacity: 0.78;
+        transition: opacity 0.15s;
+        padding: 10px 14px;
+        cursor: default;
+      }
+      .bottom-bar.expanded:hover,
+      .bottom-bar.expanded:focus-within {
+        opacity: 0.78;
+      }
+      .bar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 34px;
+        height: 14px;
+        background: #1e1f20;
+        border: 1px solid #333537;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        color: #8ab4f8;
+        font-size: 9px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .bottom-bar.expanded .bar-toggle {
+        display: none;
+      }
+      .bottom-bar:not(.expanded) > .bar-group:not(:first-of-type),
+      .bottom-bar:not(.expanded) > .divider {
+        display: none;
+      }
+      .bottom-bar:not(.expanded) > .bar-group:first-of-type {
+        pointer-events: none;
+      }
+    }
   </style>
 </head>
 
@@ -298,9 +309,9 @@
   </div>
   <button id="prevModelBig" class="nav-arrow" title="Previous Model">&#10094;</button>
   <button id="nextModelBig" class="nav-arrow" title="Next Model">&#10095;</button>
-  <div id="bottomBar" class="bottom-bar">
-    <div id="barToggle" class="bar-toggle">&#9650;</div>
-    <div class="bar-group primary-group">
+  <div class="bottom-bar" id="bottomBar">
+    <div class="bar-toggle" id="barToggle">&#9650;</div>
+    <div class="bar-group">
       <button id="prevModelSm" class="btn-sm icon-btn" title="Previous Model">&#10094;</button>
       <select id="modelSelect" class="model-select" title="Select 3D Model"></select>
       <button id="nextModelSm" class="btn-sm icon-btn" title="Next Model">&#10095;</button>
@@ -382,25 +393,25 @@
   })();
 
   function initApp() {
+    const bottomBar = document.getElementById('bottomBar');
+    bottomBar.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    bottomBar.addEventListener('click', (e) => {
+      if (window.matchMedia('(max-width: 768px), (pointer: coarse)').matches) {
+        if (!bottomBar.classList.contains('expanded')) {
+          e.preventDefault();
+          e.stopPropagation();
+          bottomBar.classList.add('expanded');
+        }
+      }
+    }, true);
+
     const statusEl = document.getElementById('loaderStatus');
     const loaderText = document.getElementById('loaderText');
     const realismChk = document.getElementById('realismChk');
     const shadowLiftSlider = document.getElementById('shadowLiftSlider');
-    const bottomBar = document.getElementById('bottomBar');
     let isRealism = realismChk.checked;
     let shadowLift = parseFloat(shadowLiftSlider.value);
-
-    bottomBar.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-    });
-
-    bottomBar.addEventListener('click', (e) => {
-      if (!bottomBar.classList.contains('expanded')) {
-        e.preventDefault();
-        e.stopPropagation();
-        bottomBar.classList.add('expanded');
-      }
-    });
 
     function setLoader(msg) {
       if (msg) {
@@ -684,9 +695,10 @@
     let currentHdrIdx = 0;
     const hdrSelect = document.getElementById('hdrSelect');
 
-    function buildHdrDropdown() {
+    function rebuildHdrDropdown() {
+      const presets = getActivePresets();
       hdrSelect.innerHTML = '';
-      realismPresets.forEach((p, i) => {
+      presets.forEach((p, i) => {
         const opt = document.createElement('option');
         opt.value = i;
         opt.textContent = p.name;
@@ -896,6 +908,14 @@
       mixer.update(0);
     });
 
+    function resetCameraView() {
+      yaw = 30;
+      pitch = -14;
+      zoomZ = 105;
+      panX = 0;
+      panY = 0;
+    }
+
     function executeLoadModel(idx, token) {
       const item = models[idx];
       setLoader('Loading ' + item.name + '...');
@@ -904,6 +924,11 @@
         item.url,
         (gltf) => {
           if (token !== loadRequestToken) return;
+
+          resetCameraView();
+          shadowLift = 0;
+          shadowLiftSlider.value = 0;
+          applyHdrPreset(currentHdrIdx);
 
           if (activeModel) {
             stageGroup.remove(activeModel);
@@ -914,11 +939,6 @@
             animActions = [];
             animDuration = 0;
           }
-
-          resetCameraView();
-          shadowLift = 0;
-          shadowLiftSlider.value = 0;
-          applyHdrPreset(currentHdrIdx);
 
           const root = gltf.scene;
           const box = new THREE.Box3().setFromObject(root);
@@ -987,7 +1007,7 @@
             animSlider.disabled = false;
             animSlider.value = 0;
           } else {
-            animPlaying = false;
+            animPlaying = true;
             animBtn.disabled = true;
             animBtn.classList.remove('active');
             animSlider.disabled = true;
@@ -1030,12 +1050,10 @@
 
     modelSelect.addEventListener('change', (e) => {
       loadModel(parseInt(e.target.value, 10), true);
-      modelSelect.blur();
     });
 
     hdrSelect.addEventListener('change', (e) => {
       applyHdrPreset(parseInt(e.target.value, 10));
-      hdrSelect.blur();
     });
 
     document.getElementById('prevModelBig').addEventListener('click', () => loadModel(currentModelIdx - 1));
@@ -1071,14 +1089,8 @@
     let panY = 0;
     let initialPinchDistance = 0;
     let initialZoomZ = 105;
-    let prevTouchMidX = 0;
-    let prevTouchMidY = 0;
-
-    function resetCameraView() {
-      zoomZ = 105;
-      panX = 0;
-      panY = 0;
-    }
+    let prevMidX = 0;
+    let prevMidY = 0;
 
     const minZoom = -450;
     const maxZoom = 290;
@@ -1147,11 +1159,17 @@
 
     const canvas = renderer.domElement;
 
-    canvas.addEventListener('mousedown', (e) => {
+    function closeMobileBar() {
+      if (bottomBar.classList.contains('expanded')) {
+        bottomBar.classList.remove('expanded');
+      }
       if (document.activeElement && bottomBar.contains(document.activeElement)) {
         document.activeElement.blur();
       }
-      bottomBar.classList.remove('expanded');
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      closeMobileBar();
       if (e.button === 0) {
         isOrbiting = true;
         previousX = e.clientX;
@@ -1206,13 +1224,13 @@
       const t0 = t.item(0);
       const t1 = t.item(1);
       return {
-        x: (t0.clientX + t1.clientX) * 0.5,
-        y: (t0.clientY + t1.clientY) * 0.5
+        x: (t0.clientX + t1.clientX) / 2,
+        y: (t0.clientY + t1.clientY) / 2
       };
     }
 
     canvas.addEventListener('touchstart', (e) => {
-      bottomBar.classList.remove('expanded');
+      closeMobileBar();
       if (e.touches.length === 1) {
         const t0 = e.touches.item(0);
         isOrbiting = true;
@@ -1225,8 +1243,8 @@
         initialPinchDistance = getTouchDistance(e.touches);
         initialZoomZ = zoomZ;
         const mid = getTouchMidpoint(e.touches);
-        prevTouchMidX = mid.x;
-        prevTouchMidY = mid.y;
+        prevMidX = mid.x;
+        prevMidY = mid.y;
       }
     }, { passive: false });
 
@@ -1243,10 +1261,10 @@
         zoomZ = Math.max(minZoom, Math.min(maxZoom, initialZoomZ + (getTouchDistance(e.touches) - initialPinchDistance) * 0.55));
         const mid = getTouchMidpoint(e.touches);
         const precision = getZoomPrecisionFactor();
-        panX += (mid.x - prevTouchMidX) * 0.14 * precision;
-        panY += (mid.y - prevTouchMidY) * 0.14 * precision;
-        prevTouchMidX = mid.x;
-        prevTouchMidY = mid.y;
+        panX += (mid.x - prevMidX) * 0.14 * precision;
+        panY += (mid.y - prevMidY) * 0.14 * precision;
+        prevMidX = mid.x;
+        prevMidY = mid.y;
       }
     }, { passive: false });
 
@@ -1264,7 +1282,7 @@
     });
 
     rebuildModelDropdown();
-    buildHdrDropdown();
+    rebuildHdrDropdown();
     applyRealismState();
     loadModel(0, true);
   }
