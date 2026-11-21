@@ -25,7 +25,7 @@ async function routeSlots(req, res) {
     const data = await getSlots(req.query.id)
     data ? res.send(data) : res.status(400).send()
   } catch (err) {
-    console.log('ERR routeSlots', err.status, err.message)
+    console.log('ERR routeSlots', err.message)
   }
 }
 
@@ -115,7 +115,7 @@ function check() {
         updateSubs()
       }
     } catch (err) {
-      console.log('ERR doCheck', err.status, err.message)
+      console.log('ERR doCheck', err.message)
     }
   }
 }
@@ -154,7 +154,7 @@ function check2() {
         updateSubs()
       }
     } catch (err) {
-      console.log('ERR doCheck2', err.status, err.message)
+      console.log('ERR doCheck2', err.message)
     }
   }
 }
@@ -209,7 +209,7 @@ function sendMaileroo(to, subject, plain) {
       }
     })
     .then(res => console.log('maileroo', res.status))
-    .catch(err => console.log('ERR maileroo ', err.status, err.message))
+    .catch(err => console.log('ERR maileroo ', err.message))
 }
 
 function filterSubs(req, res) {
@@ -274,7 +274,7 @@ async function updateDB() {
     db = [...newDb]
     fs.writeFileSync('public/db.json', JSON.stringify(db))
   } catch (err) {
-    console.log('ERR updateDB', err.status, err.message)
+    console.log('ERR updateDB', err.message)
   }
 }
 
@@ -291,7 +291,7 @@ function updateSubs() {
       }
     })
     .then(res => console.log('updateSubs', res.status))
-    .catch(err => console.log('ERR updateSubs', err.status, err.message))
+    .catch(err => console.log('ERR updateSubs', err.message))
 }
 
 
@@ -309,7 +309,7 @@ function readSubs() {
       fs.writeFileSync('subs2.json', JSON.stringify(subs2))
       console.log('readSubs', res.status)
     })
-    .catch(err => console.log('ERR readSubs', err.status, err.message))
+    .catch(err => console.log('ERR readSubs', err.message))
 }
 
 function IDinfo(id) {
@@ -412,7 +412,7 @@ function routeChatu(req, res) {
       res.send('u lost?')
     }
   } catch (err) {
-    console.log('ERR routeChatu', err.status, err.message)
+    console.log('ERR routeChatu', err.message)
   }
 }
 
@@ -431,7 +431,7 @@ https://chaturbate.com/${el}`)
           updateFollowed()
         }
       })
-      .catch(err => console.log('ERR checkFollowed', err.status, err.message))
+      .catch(err => console.log('ERR checkFollowed', err.message))
   })
 }
 
@@ -448,7 +448,7 @@ function readFollowed() {
       checkFollowed()
       setInterval(checkFollowed, 1000 * 60)
     })
-    .catch(err => console.log('ERR readFollowed', err.status, err.message))
+    .catch(err => console.log('ERR readFollowed', err.message))
 }
 
 function updateFollowed() {
@@ -462,5 +462,5 @@ function updateFollowed() {
       }
     })
     .then(res => res)
-    .catch(err => console.log('ERR readFollowed', err.status, err.message))
+    .catch(err => console.log('ERR readFollowed', err.message))
 }

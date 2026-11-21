@@ -461,10 +461,14 @@
 
   function changeMonth(step) {
     currentMonth += step;
-    if (currentMonth < 0) { currentMonth = 11;
-      currentYear--; }
-    if (currentMonth > 11) { currentMonth = 0;
-      currentYear++; }
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
     renderCalendar();
   }
 
