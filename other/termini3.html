@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="mk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>МојТермин</title>
+  <style>
+  body {
+    font-family: sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 10px;
+  }
+
+  .disclaimer {
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    border-radius: 4px;
+  }
+
+  input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+
+  .item {
+    border: 1px solid #ccc;
+    padding: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+
+  .free {
+    border-left: 4px solid green;
+  }
+
+  .busy {
+    border-left: 4px solid red;
+  }
+
+  #modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  #box {
+    background: #fff;
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 15px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+    margin: 10px 0;
+  }
+
+  .day {
+    padding: 6px;
+    border: 1px solid #eee;
+  }
+
+  .ok {
+    background: #cfc;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .no {
+    background: #fcc;
+    cursor: pointer;
+  }
+
+  .sel {
+    outline: 2px solid #2563eb;
+  }
+
+  .slots-wrap {
+    margin-top: 12px;
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
+  }
+
+  .slots-title {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .slot {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 3px;
+    border: 1px solid #ccc;
+  }
+  </style>
+</head>
+
+<body>
+  <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-left: 5px solid #ffc107; padding: 15px 20px; margin: 20px 0; border-radius: 4px; font-size: 13px;">
+    <strong>Напомена:</strong> Иако користи податоци од системот МојТермин, овој сајт не е официјален и не е поврзан со Министерството за здравство.
+  </div>
+  <input id="q" placeholder="Пребарај..." disabled>
+  <div id="status">Се вчитува...</div>
+  <div id="list"></div>
+  <div id="modal">
+    <div id="box">
+      <button id="close" style="float:right">X</button>
+      <div id="title" style="font-weight:bold; margin-bottom:10px;"></div>
+      <div id="cal"></div>
+    </div>
+  </div>
+  <script>
+  const PROTOCOL = 'https' + ':' + '//';
+  const API_BASE = PROTOCOL + ['mojtermin.mk', 'api', 'pp'].join('/');
+  const MONTHS = ['Јануари', 'Февруари', 'Март', 'Април', 'Мај', 'Јуни', 'Јули', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'];
+  const CYR_TO_LAT = {
+    'а': 'a',
+    'б': 'b',
+    'в': 'v',
+    'г': 'g',
+    'д': 'd',
+    'ѓ': 'gj',
+    'е': 'e',
+    'ж': 'zh',
+    'з': 'z',
+    'ѕ': 'dz',
+    'и': 'i',
+    'ј': 'j',
+    'к': 'k',
+    'л': 'l',
+    'љ': 'lj',
+    'м': 'm',
+    'н': 'n',
+    'њ': 'nj',
+    'о': 'o',
+    'п': 'p',
+    'р': 'r',
+    'с': 's',
+    'т': 't',
+    'ќ': 'kj',
+    'у': 'u',
+    'ф': 'f',
+    'х': 'h',
+    'ц': 'c',
+    'ч': 'ch',
+    'џ': 'dzh',
+    'ш': 'sh'
+  };
+
+  let db = [],
+    slots = {},
+    yr = 2026,
+    mo = 0,
+    sel = null;
+  let currentReqId = 0;
+  let calAbort = null;
+
+  const q = document.getElementById('q');
+  const status = document.getElementById('status');
+  const list = document.getElementById('list');
+  const modal = document.getElementById('modal');
+  const cal = document.getElementById('cal');
+
+  function toLatin(text) {
+    return text.toLowerCase().split('').map(c => CYR_TO_LAT[c] || c).join('');
+  }
+
+  function proxyUrl(targetUrl) {
+    return PROTOCOL + ['proxy.cors.dev', targetUrl].join('/');
+  }
+
+  async function init() {
+    try {
+      const targetUrl = [API_BASE, 'side_navigation'].join('/');
+      const res = await fetch(proxyUrl(targetUrl));
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      for (const cat of data) {
+        if (cat.label !== 'specijalist' && cat.label !== 'aparat') continue;
+        for (const s of (cat.subsections || []))
+          for (const c of (s.subsections || []))
+            for (const h of (c.subsections || []))
+              for (const r of (h.subsections || []))
+                db.push({
+                  id: r.id,
+                  val: Number(r.value),
+                  name: r.name.trim(),
+                  info: `${s.name.trim()} - ${h.name.trim()} (${c.name.trim()})`,
+                  text: toLatin(`${r.name} ${s.name} ${h.name} ${c.name} ${r.id}`)
+                });
+      }
+      status.textContent = '';
+      q.disabled = false;
+    } catch {
+      status.textContent = 'Грешка при вчитување.';
+    }
+  }
+
+  q.oninput = () => {
+    const val = toLatin(q.value.trim());
+    if (!val) {
+      list.innerHTML = '';
+      return;
+    }
+    const words = val.split(/\s+/);
+    const found = db.filter(x => words.every(w => x.text.includes(w)));
+    drawList(found.slice(0, 80));
+  };
+
+  function drawList(items) {
+    list.innerHTML = items.map(x => `
+      <div class="item ${x.val === -1 ? 'busy' : 'free'}" onclick="openCal(${x.id})">
+        <b>${x.name}</b><br><small>${x.info}</small>
+      </div>
+    `).join('');
+  }
+
+  async function openCal(id) {
+    const reqId = ++currentReqId;
+    if (calAbort) calAbort.abort();
+    calAbort = new AbortController();
+
+    const item = db.find(x => x.id === id);
+    document.getElementById('title').textContent = item.name;
+    cal.innerHTML = 'Се вчитува...';
+    modal.style.display = 'block';
+    slots = {};
+    sel = null;
+
+    try {
+      const targetUrl = [API_BASE, 'resources', id, 'slots_availability'].join('/');
+      const res = await fetch(proxyUrl(targetUrl), { signal: calAbort.signal });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (reqId !== currentReqId) return;
+
+      const raw = data.timeslots || data;
+      for (const m of Object.keys(raw)) {
+        for (const s of (raw[m] || [])) {
+          const [d, t] = s.term.split('T');
+          if (!slots[d]) slots[d] = [];
+          slots[d].push({ t: t.slice(0, 5), ok: s.isAvailable });
+          if (!sel) sel = d;
+        }
+      }
+      if (sel) {
+        const [y, m] = sel.split('-');
+        yr = +y;
+        mo = +m - 1;
+      }
+      drawCal();
+    } catch (e) {
+      if (e.name === 'AbortError' || reqId !== currentReqId) return;
+      cal.innerHTML = 'Грешка при вчитување термини.';
+    }
+  }
+
+  function drawCal() {
+    const first = (new Date(yr, mo, 1).getDay() + 6) % 7;
+    const days = new Date(yr, mo + 1, 0).getDate();
+    let html = `<div><button onclick="step(-1)">&lt;</button> ${MONTHS[mo]} ${yr} <button onclick="step(1)">&gt;</button></div><div class="grid">`;
+    for (let i = 0; i < first; i++) html += `<div></div>`;
+    for (let d = 1; d <= days; d++) {
+      const key = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const st = slots[key];
+      let cls = st ? (st.some(x => x.ok) ? 'day ok' : 'day no') : 'day';
+      if (key === sel) cls += ' sel';
+      html += `<div class="${cls}" onclick="pick('${key}')">${d}</div>`;
+    }
+    html += `</div>`;
+    if (sel && slots[sel]) {
+      const [y, m, d] = sel.split('-');
+      html += `<div class="slots-wrap"><div class="slots-title">Термини за ${d}.${m}.${y}:</div><div>` +
+        slots[sel].map(x => `<span class="slot ${x.ok ? 'ok' : 'no'}">${x.t}</span>`).join('') +
+        `</div></div>`;
+    }
+    cal.innerHTML = html;
+  }
+
+  function step(n) {
+    mo += n;
+    if (mo < 0) {
+      mo = 11;
+      yr--;
+    }
+    if (mo > 11) {
+      mo = 0;
+      yr++;
+    }
+    sel = null;
+    drawCal();
+  }
+
+  function pick(d) {
+    if (slots[d]) {
+      sel = d;
+      drawCal();
+    }
+  }
+
+  function closeModal() {
+    currentReqId++;
+    if (calAbort) {
+      calAbort.abort();
+      calAbort = null;
+    }
+    modal.style.display = 'none';
+  }
+
+  document.getElementById('close').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+  init();
+  </script>
+</body>
+
+</html>

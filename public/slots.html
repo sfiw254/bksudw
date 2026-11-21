@@ -97,18 +97,18 @@ const PARAMS = new URLSearchParams(window.location.search)
 const PARAMS_ID = PARAMS.get('id')
 
 
-// fetch(`https://proxy.cors.dev/https://mojtermin.mk/api/pp/resources/${PARAMS_ID}/slots_availability`, {
-//     signal: AbortSignal.timeout(4000),
-//     headers: {
-//       'Content-Type': 'application/json'
-//     }
-//   })
-fetch(`/termini/slots?id=${PARAMS_ID}`, {
+fetch(`https://proxy.cors.dev/https://mojtermin.mk/api/pp/resources/${PARAMS_ID}/slots_availability`, {
     signal: AbortSignal.timeout(4000),
     headers: {
       'Content-Type': 'application/json'
     }
   })
+  // fetch(`/termini/slots?id=${PARAMS_ID}`, {
+  //     signal: AbortSignal.timeout(4000),
+  //     headers: {
+  //       'Content-Type': 'application/json'
+  //     }
+  //   })
   .then(res => res.json())
   .then(data => {
     const slots = PARSE_DATA(data.timeslots)
