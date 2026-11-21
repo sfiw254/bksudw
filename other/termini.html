@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="mk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>МојТермин - Пребарувач</title>
+  <style>
+    /* Основен распоред */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #f4f6f9; color: #1f2937; padding: 20px; }
+    .container { max-width: 960px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 20px; color: #0f172a; font-size: 24px; }
+
+    /* Пребарување и статус */
+    .search-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+      position: sticky;
+      top: 10px;
+      z-index: 10;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #searchInput:focus { border-color: #2563eb; }
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .retry-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .retry-btn:hover { background: #1d4ed8; }
+
+    /* Мрежа и картички */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+    .card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      border-left: 4px solid #2563eb;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .card.free { border-left-color: #16a34a; }
+    .card.busy { border-left-color: #dc2626; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    .ime { font-weight: 700; font-size: 16px; color: #0f172a; }
+    .spec { font-size: 13px; font-weight: 600; color: #2563eb; }
+    .bolnica { font-size: 13px; color: #475569; }
+    .meta {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Прозорец (Modal) и календар */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .modal-sub { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      color: #475569;
+    }
+    .close-btn:hover { background: #e2e8f0; }
+
+    .cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .cal-nav button {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .cal-nav button:hover { background: #e2e8f0; }
+    .cal-month { font-weight: 700; font-size: 16px; color: #0f172a; text-transform: capitalize; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .cal-day-name { font-size: 12px; font-weight: 600; color: #64748b; padding: 4px 0; }
+    .cal-cell { padding: 8px 0; border-radius: 8px; font-size: 14px; background: #f8fafc; color: #94a3b8; border: 1px solid transparent; }
+    .cal-cell.empty { background: transparent; }
+    .cal-cell.has-free { background: #dcfce7; color: #166534; font-weight: 700; cursor: pointer; border-color: #86efac; }
+    .cal-cell.has-free:hover { background: #bbf7d0; }
+    .cal-cell.only-busy { background: #fee2e2; color: #991b1b; font-weight: 700; cursor: pointer; border-color: #fca5a5; }
+    .cal-cell.only-busy:hover { background: #fecaca; }
+    .cal-cell.selected { outline: 2px solid #2563eb; }
+
+    /* Слободни и зафатени термини */
+    .slots-container { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+    .slots-date-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #0f172a; }
+    .slots-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .slot-badge { padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .slot-free { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .slot-busy { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .loader { text-align: center; padding: 20px; color: #64748b; font-size: 14px; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Пребарувач на доктори и апарати</h1>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Внеси име, град, болница, специјалност (пр. inter bitola)..." disabled>
+      <div class="status">
+        <span id="statusText">Се вчитуваат податоците од МојТермин...</span>
+        <span id="countText"></span>
+      </div>
+    </div>
+    <div class="grid" id="resultsGrid"></div>
+  </div>
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-sub" id="modalSub"></div>
+        </div>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+  <script>
+  const PROTOCOL = 'https' + ':' + '//';
+  const API_BASE = PROTOCOL + ['mojtermin.mk', 'api', 'pp'].join('/');
+  const REQUEST_TIMEOUT = 4000;
+
+  function getProxyUrls(targetUrl) {
+    return [
+      PROTOCOL + ['proxy.cors.dev', targetUrl].join('/')
+    ];
+  }
+
+  const MONTHS_MK = ['Јануари', 'Февруари', 'Март', 'Април', 'Мај', 'Јуни', 'Јули', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'];
+  const DAYS_MK = ['Пон', 'Вто', 'Сре', 'Чет', 'Пет', 'Саб', 'Нед'];
+
+  const CYR_TO_LAT = {
+    'а': 'a',
+    'б': 'b',
+    'в': 'v',
+    'г': 'g',
+    'д': 'd',
+    'ѓ': 'gj',
+    'е': 'e',
+    'ж': 'zh',
+    'з': 'z',
+    'ѕ': 'dz',
+    'и': 'i',
+    'ј': 'j',
+    'к': 'k',
+    'л': 'l',
+    'љ': 'lj',
+    'м': 'm',
+    'н': 'n',
+    'њ': 'nj',
+    'о': 'o',
+    'п': 'p',
+    'р': 'r',
+    'с': 's',
+    'т': 't',
+    'ќ': 'kj',
+    'у': 'u',
+    'ф': 'f',
+    'х': 'h',
+    'ц': 'c',
+    'ч': 'ch',
+    'џ': 'dzh',
+    'ш': 'sh'
+  };
+
+  let allResources = [];
+  let slotsByDate = {};
+  let currentYear = new Date().getFullYear();
+  let currentMonth = new Date().getMonth();
+  let selectedDate = null;
+
+  const searchInput = document.getElementById('searchInput');
+  const statusText = document.getElementById('statusText');
+  const countText = document.getElementById('countText');
+  const resultsGrid = document.getElementById('resultsGrid');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalBody = document.getElementById('modalBody');
+
+  function toLatin(text) {
+    return text.toLowerCase().split('').map(char => CYR_TO_LAT[char] || char).join('');
+  }
+
+  async function fetchFastest(targetUrl, timeoutMs = REQUEST_TIMEOUT) {
+    const urls = getProxyUrls(targetUrl);
+    const controllers = urls.map(() => new AbortController());
+    const timer = setTimeout(() => controllers.forEach(c => c.abort()), timeoutMs);
+
+    try {
+      const requests = urls.map(async (url, idx) => {
+        const response = await fetch(url, { signal: controllers[idx].signal });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        controllers.forEach((c, i) => { if (i !== idx) c.abort(); });
+        return data;
+      });
+      return await Promise.any(requests);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /* 1. Вчитување на базата */
+  async function loadDatabase() {
+    statusText.textContent = 'Се вчитуваат податоците од МојТермин...';
+    try {
+      const targetUrl = [API_BASE, 'side_navigation'].join('/');
+      const rawData = await fetchFastest(targetUrl);
+      allResources = parseResources(rawData);
+
+      statusText.textContent = 'Подготвено за пребарување';
+      searchInput.disabled = false;
+      renderCards(allResources.slice(0, 60));
+      countText.textContent = `Прикажани 60 од ${allResources.length}`;
+    } catch (error) {
+      statusText.innerHTML = 'Грешка при вчитување на податоците. <button class="retry-btn" id="retryInit">Обиди се повторно</button>';
+      document.getElementById('retryInit').onclick = loadDatabase;
+    }
+  }
+
+  function parseResources(data) {
+    const list = [];
+    for (const category of data) {
+      if (category.label !== 'specijalist' && category.label !== 'aparat') continue;
+      for (const spec of (category.subsections || [])) {
+        for (const city of (spec.subsections || [])) {
+          for (const hospital of (city.subsections || [])) {
+            for (const res of (hospital.subsections || [])) {
+              const item = {
+                id: res.id,
+                value: Number(res.value),
+                name: res.name.trim(),
+                hospital: hospital.name.trim(),
+                city: city.name.trim(),
+                specialty: spec.name.trim()
+              };
+              item.searchStr = toLatin(`${item.name} ${item.hospital} ${item.city} ${item.specialty} ${item.id}`);
+              list.push(item);
+            }
+          }
+        }
+      }
+    }
+    return list;
+  }
+
+  /* 2. Пребарување */
+  searchInput.addEventListener('input', () => {
+    const query = toLatin(searchInput.value.trim());
+    if (!query) {
+      renderCards(allResources.slice(0, 60));
+      countText.textContent = `Прикажани 60 од ${allResources.length}`;
+      return;
+    }
+
+    const words = query.split(/\s+/);
+    const filtered = allResources.filter(item => words.every(word => item.searchStr.includes(word)));
+    renderCards(filtered.slice(0, 100));
+    countText.textContent = `Пронајдени: ${filtered.length}`;
+  });
+
+  /* 3. Приказ на картички */
+  function renderCards(items) {
+    resultsGrid.innerHTML = '';
+    for (const item of items) {
+      const card = document.createElement('div');
+      const statusClass = item.value === -1 ? 'busy' : 'free';
+      card.className = `card ${statusClass}`;
+      card.innerHTML = `
+      <div class="ime">${item.name}</div>
+      <div class="spec">${item.specialty}</div>
+      <div class="bolnica">${item.hospital}</div>
+      <div class="meta">
+        <span>📍 ${item.city}</span>
+        <span>ID: ${item.id}</span>
+      </div>
+    `;
+      card.onclick = () => openCalendar(item);
+      resultsGrid.appendChild(card);
+    }
+  }
+
+  /* 4. Календар и термини */
+  async function openCalendar(item) {
+    document.getElementById('modalTitle').textContent = item.name;
+    document.getElementById('modalSub').textContent = `${item.specialty} • ${item.hospital} (${item.city})`;
+    modalBody.innerHTML = '<div class="loader">Се вчитуваат термините...</div>';
+    modalOverlay.classList.add('active');
+
+    slotsByDate = {};
+    selectedDate = null;
+
+    try {
+      const targetUrl = [API_BASE, 'resources', item.id, 'slots_availability'].join('/');
+      const data = await fetchFastest(targetUrl);
+      const firstDate = groupSlotsByDate(data.timeslots || data);
+
+      if (firstDate) {
+        const [year, month] = firstDate.split('-');
+        currentYear = parseInt(year, 10);
+        currentMonth = parseInt(month, 10) - 1;
+        selectedDate = firstDate;
+      } else {
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth();
+      }
+
+      renderCalendar();
+    } catch (error) {
+      modalBody.innerHTML = '<div class="loader">Грешка при вчитување на термините.<br><br><button class="retry-btn" id="retryCal">Обиди се повторно</button></div>';
+      document.getElementById('retryCal').onclick = () => openCalendar(item);
+    }
+  }
+
+  function groupSlotsByDate(timeslots) {
+    let firstDate = null;
+    if (!timeslots || typeof timeslots !== 'object') return null;
+
+    for (const monthKey of Object.keys(timeslots)) {
+      const slots = timeslots[monthKey];
+      if (!Array.isArray(slots)) continue;
+
+      for (const slot of slots) {
+        if (!slot.term) continue;
+        const [datePart, timeRaw] = slot.term.split('T');
+        const timePart = timeRaw ? timeRaw.slice(0, 5) : '';
+
+        if (!slotsByDate[datePart]) slotsByDate[datePart] = [];
+        slotsByDate[datePart].push({ time: timePart, isAvailable: Boolean(slot.isAvailable) });
+
+        if (!firstDate) firstDate = datePart;
+      }
+    }
+    return firstDate;
+  }
+
+  function renderCalendar() {
+    const firstWeekday = new Date(currentYear, currentMonth, 1).getDay();
+    const startOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    let html = `
+    <div class="cal-nav">
+      <button id="prevMonth">&lt;</button>
+      <div class="cal-month">${MONTHS_MK[currentMonth]} ${currentYear}</div>
+      <button id="nextMonth">&gt;</button>
+    </div>
+    <div class="cal-grid">
+  `;
+
+    for (const dayName of DAYS_MK) {
+      html += `<div class="cal-day-name">${dayName}</div>`;
+    }
+    for (let i = 0; i < startOffset; i++) {
+      html += `<div class="cal-cell empty"></div>`;
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const mm = String(currentMonth + 1).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      const dateKey = `${currentYear}-${mm}-${dd}`;
+      const daySlots = slotsByDate[dateKey];
+
+      let cellClass = 'cal-cell';
+      if (daySlots && daySlots.length > 0) {
+        cellClass += daySlots.some(s => s.isAvailable) ? ' has-free' : ' only-busy';
+      }
+      if (dateKey === selectedDate) cellClass += ' selected';
+
+      html += `<div class="${cellClass}" data-date="${dateKey}">${day}</div>`;
+    }
+
+    html += `</div><div class="slots-container" id="slotsContainer"></div>`;
+    modalBody.innerHTML = html;
+
+    document.getElementById('prevMonth').onclick = () => changeMonth(-1);
+    document.getElementById('nextMonth').onclick = () => changeMonth(1);
+
+    modalBody.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+      const dateKey = cell.getAttribute('data-date');
+      if (slotsByDate[dateKey]) {
+        cell.onclick = () => {
+          selectedDate = dateKey;
+          renderCalendar();
+        };
+      }
+    });
+
+    renderDaySlots();
+  }
+
+  function changeMonth(step) {
+    currentMonth += step;
+    if (currentMonth < 0) { currentMonth = 11;
+      currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0;
+      currentYear++; }
+    renderCalendar();
+  }
+
+  function renderDaySlots() {
+    const container = document.getElementById('slotsContainer');
+    if (!selectedDate || !slotsByDate[selectedDate]) {
+      container.innerHTML = '<div style="font-size:13px;color:#64748b;">Избери обоен ден од календарот за приказ на термини.</div>';
+      return;
+    }
+
+    const sortedSlots = slotsByDate[selectedDate].slice().sort((a, b) => a.time.localeCompare(b.time));
+    const [year, month, day] = selectedDate.split('-');
+
+    let html = `<div class="slots-date-title">Термини за ${day}.${month}.${year}:</div><div class="slots-list">`;
+    for (const slot of sortedSlots) {
+      const badgeClass = slot.isAvailable ? 'slot-badge slot-free' : 'slot-badge slot-busy';
+      html += `<div class="${badgeClass}">${slot.time}</div>`;
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  document.getElementById('closeModal').onclick = () => modalOverlay.classList.remove('active');
+  modalOverlay.onclick = (e) => {
+    if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+  };
+
+  loadDatabase();
+  </script>
+</body>
+
+</html>
