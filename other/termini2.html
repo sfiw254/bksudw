@@ -109,7 +109,9 @@
 </head>
 
 <body>
-  <div class="disclaimer">Напомена: Оваа страница не е официјална апликација на МојТермин. Податоците се преземаат директно од јавниот сервис.</div>
+  <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-left: 5px solid #ffc107; padding: 15px 20px; margin: 20px 0; border-radius: 4px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
+    <strong>Напомена:</strong> Оваа страница користи навремени и точни податоци од системот МојТермин, но не е официјална и не е поврзана со Министерството за здравство.
+  </div>
   <input id="q" placeholder="Пребарај..." disabled>
   <div id="status">Се вчитува...</div>
   <div id="list"></div>
@@ -288,13 +290,26 @@
     cal.innerHTML = html;
   }
 
-  function step(n) { mo += n; if (mo < 0) { mo = 11;
-      yr--; } if (mo > 11) { mo = 0;
-      yr++; } sel = null;
-    drawCal(); }
+  function step(n) {
+    mo += n;
+    if (mo < 0) {
+      mo = 11;
+      yr--;
+    }
+    if (mo > 11) {
+      mo = 0;
+      yr++;
+    }
+    sel = null;
+    drawCal();
+  }
 
-  function pick(d) { if (slots[d]) { sel = d;
-      drawCal(); } }
+  function pick(d) {
+    if (slots[d]) {
+      sel = d;
+      drawCal();
+    }
+  }
 
   function closeModal() {
     currentReqId++;
