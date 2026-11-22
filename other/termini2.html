@@ -195,7 +195,7 @@
 
   function getProxyUrls(targetUrl) {
     return [
-      PROTOCOL + ['proxy.cors.dev', targetUrl].join('/')
+      PROTOCOL + ['proxy.cors.dev', encodeURIComponent(targetUrl)].join('/')
     ];
   }
 

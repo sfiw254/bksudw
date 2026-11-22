@@ -179,7 +179,7 @@
   }
 
   function proxyUrl(targetUrl) {
-    return PROTOCOL + ['proxy.cors.dev', targetUrl].join('/');
+    return PROTOCOL + ['proxy.cors.dev', encodeURIComponent(targetUrl)].join('/');
   }
 
   async function init() {
