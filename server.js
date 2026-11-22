@@ -179,11 +179,11 @@ function notify(id, name) {
   subs[id].forEach(el => {
     const subject = `${name} има нови термини`
     const plain = `${name} има нови термини:
-https://server-sfiw.onrender.com/termini/slots.html?id=${id}
+https://sfiw.onrender.com/termini/slots.html?id=${id}
 
 
 За да го исклучите известувањето:
-https://server-sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=${el.code}`
+https://sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=${el.code}`
     sendMaileroo(el.email, subject, plain)
     // console.log('mock send email ', subject,el.email)
   })
@@ -192,8 +192,8 @@ https://server-sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=$
 function sendMaileroo(to, subject, plain) {
   const config = {
     "from": {
-      "address": "server-sfiw@546efd10e8c3419e.maileroo.org",
-      "display_name": "server-sfiw.onrender.com"
+      "address": "sfiw@546efd10e8c3419e.maileroo.org",
+      "display_name": "sfiw.onrender.com"
     },
     "to": [{
       "address": to
@@ -220,7 +220,7 @@ function filterSubs(req, res) {
   for (property in subs) {
     subs[property].forEach(el => {
       if (el.email == req.query.email) {
-        let url = `https://server-sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
+        let url = `https://sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
         list.unshift({ name: IDinfo(property).name, url: url })
       }
     })
@@ -375,13 +375,13 @@ function shouldCheck() {
 }
 
 setInterval(function() {
-  axios('https://server-sfiw.onrender.com')
+  axios('https://sfiw.onrender.com')
     .then(res => res)
     .catch(err => err)
 }, 454938)
 
 setInterval(function() {
-  axios('https://server-sfiw.onrender.com')
+  axios('https://sfiw.onrender.com')
     .then(res => res)
     .catch(err => err)
 }, 834782)
