@@ -3,14 +3,20 @@ const axios = require('axios')
 const express = require('express')
 const app = express()
 let db = JSON.parse(fs.readFileSync('public/db.json', 'utf8'))
-let subs = fs.readFileSync('subs.json', 'utf8')
-let subs2 = fs.readFileSync('subs2.json', 'utf8')
+let subs = JSON.parse(fs.readFileSync('subs.json', 'utf8'))
+let subs2 = JSON.parse(fs.readFileSync('subs2.json', 'utf8'))
 let history = {}
 
 app.use('/termini', express.static('public'))
 app.get('/termini/slots', (req, res) => routeSlots(req, res))
 app.get('/termini/sub', (req, res) => routeSub(req, res))
 app.get('/termini/unsub', (req, res) => routeUnsub(req, res))
+
+// Log heap memory in MB every x seconds
+setInterval(() => {
+  const usedMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+  console.log(`Memory: ${usedMB} MB`);
+}, 60000).unref(); // .unref() lets Node exit cleanly if the main loop stops
 
 app.listen(3000, () => {
   console.log(`Server is running on port 3000...`)
@@ -23,9 +29,10 @@ app.listen(3000, () => {
 async function routeSlots(req, res) {
   try {
     const data = await getSlots(req.query.id)
-    data ? res.send(data) : res.status(400).send()
+    res.send(data)
   } catch (err) {
     console.log('ERR routeSlots', err.message)
+    res.status(400).send()
   }
 }
 
@@ -34,7 +41,7 @@ function routeSub(req, res) {
   if (email && code && IDinfo(id) && !alreadySub()) {
     subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
     updateSubs()
-    console.log('+1 sub ', IDinfo(id).name, email)
+    console.log('+1 sub ', IDinfo(id).name && IDinfo(id), email)
   }
   res.send('ok')
 
@@ -62,7 +69,7 @@ function routeUnsub(req, res) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
         updateSubs()
-        console.log('-1 sub ', IDinfo(id).name, email)
+        console.log('-1 sub ', IDinfo(id).name && IDinfo(id), email)
       }
     })
   }
@@ -72,12 +79,56 @@ function routeUnsub(req, res) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
         updateSubs()
-        console.log('-1 sub', IDinfo(id).name, email)
+        console.log('-1 sub', IDinfo(id).name && IDinfo(id), email)
       }
     })
   }
   res.send('<h1>ok</h1><title>Исклучено</title><script>alert("Исклучено")</script>')
 }
+
+// async function iterate() {
+//   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+//   const IDs = Object.keys(subs)
+
+//   if (IDs.length && shouldCheck()) {
+//     await fetchAll()
+//     iterate()
+//   } else {
+//     setTimeout(iterate, 1000)
+//   }
+
+//   async function fetchAll() {
+//     for (const id of IDs) {
+//       if (!subs[id]) continue;
+//       getSlots(id)
+//         .then(data => check(data))
+//         .catch(err => console.log('ERR fetchAll', IDinfo(id).name, err.message))
+//       await wait(2000);
+//     }
+//   }
+
+//   function check(data) {
+//     try {
+//       const name = data.name.slice(0, 60)
+//       const id = data.id
+//       let counter = 0
+//       for (property in data.timeslots) {
+//         data.timeslots[property].forEach(el => {
+//           el.isAvailable ? counter++ : 0
+//         })
+//       }
+//       console.log(counter, name)
+//       if (counter > 1) {
+//         notify(id, name)
+//         subs2[id] = subs[id]
+//         delete subs[id]
+//         updateSubs()
+//       }
+//     } catch (err) {
+//       console.log('ERR check', err.message)
+//     }
+//   }
+// }
 
 function check() {
   let index = 0
@@ -102,7 +153,7 @@ function check() {
       const data = await getSlots(id)
       const name = data.name.slice(0, 60)
       let counter = 0
-      for (property in data.timeslots) {
+      for (const property in data.timeslots) {
         data.timeslots[property].forEach(el => {
           el.isAvailable ? counter++ : 0
         })
@@ -142,7 +193,7 @@ function check2() {
       const data = await getSlots(id)
       const name = data.name.slice(0, 60)
       let counter = 0
-      for (property in data.timeslots) {
+      for (const property in data.timeslots) {
         data.timeslots[property].forEach(el => {
           el.isAvailable ? counter++ : 0
         })
@@ -217,7 +268,7 @@ function filterSubs(req, res) {
   if (!req.query.email) {
     return
   }
-  for (property in subs) {
+  for (const property in subs) {
     subs[property].forEach(el => {
       if (el.email == req.query.email) {
         let url = `https://sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
@@ -233,6 +284,7 @@ async function updateDB() {
   if (!shouldCheck()) {
     return
   }
+  console.log('updating DB...')
   try {
     const res = await axios('https://mojtermin.mk/api/pp/side_navigation')
     const data = res.data
@@ -273,6 +325,7 @@ async function updateDB() {
     });
     db = [...newDb]
     fs.writeFileSync('public/db.json', JSON.stringify(db))
+    console.log('updateDB', res.status)
   } catch (err) {
     console.log('ERR updateDB', err.message)
   }
@@ -296,6 +349,7 @@ function updateSubs() {
 
 
 function readSubs() {
+  console.log('reading subs...')
   axios('https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82', {
       headers: {
         'Content-Type': 'application/json',
@@ -340,7 +394,7 @@ function updateAvailability(data) {
 
 function firstAvailable(data) {
   let first
-  for (property in data.timeslots) {
+  for (const property in data.timeslots) {
     data.timeslots[property].forEach(el => {
       if (el.isAvailable) {
 
@@ -405,14 +459,20 @@ readFollowed()
 function routeChatu(req, res) {
   try {
     if (req.query.data) {
-      users = JSON.parse(req.query.data).users
-      followed = JSON.parse(req.query.data).followed
+      const parsed = JSON.parse(req.query.data)
+      if (!Array.isArray(parsed.followed) || !Array.isArray(parsed.users) || !parsed.users.length || !parsed.followed.length) {
+        throw new Error('invalid data')
+      }
+      users = parsed.users
+      followed = parsed.followed
       res.send(followed)
     } else {
       res.send('u lost?')
     }
   } catch (err) {
     console.log('ERR routeChatu', err.message)
+    res.status(400).send('invalid data')
+
   }
 }
 
