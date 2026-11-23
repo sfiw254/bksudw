@@ -211,7 +211,7 @@ function check2() {
 }
 
 async function getSlots(id) {
-  if (!history[id] || Date.now() - history[id].time > 500) {
+  if (!history[id] || Date.now() - history[id].time > 1000) {
     const res = await axios(`https://mojtermin.mk/api/pp/resources/${id}/slots_availability`, {
       signal: AbortSignal.timeout(4000)
     })
