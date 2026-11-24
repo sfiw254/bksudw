@@ -86,6 +86,7 @@ function routeUnsub(req, res) {
   res.send('<h1>ok</h1><title>Исклучено</title><script>alert("Исклучено")</script>')
 }
 
+
 // async function iterate() {
 //   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //   const IDs = Object.keys(subs)
@@ -129,6 +130,57 @@ function routeUnsub(req, res) {
 //     }
 //   }
 // }
+
+
+// const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// async function iterate() {
+//   while (true) {
+//     const IDs = Object.keys(subs);
+
+//     if (IDs.length && shouldCheck()) {
+//       await fetchAll(IDs);
+//     } else {
+//       await wait(1000);
+//     }
+//   }
+// }
+
+// async function fetchAll(IDs) {
+//   for (const id of IDs) {
+//     if (!subs[id]) continue;
+//     getSlots(id)
+//       .then((data) => check(data))
+//       .catch((err) => console.log('ERR fetchAll', IDinfo(id)?.name, err.message));
+//     await wait(2000);
+//   }
+// }
+
+// function check(data) {
+//   try {
+//     const name = data.name.slice(0, 60);
+//     const id = data.id;
+//     let counter = 0;
+//     for (const property in data.timeslots) {
+//       data.timeslots[property].forEach((el) => {
+//         if (el.isAvailable) counter++;
+//       });
+//     }
+//     console.log(counter, name);
+//     if (counter > 1) {
+//       notify(id, name);
+//       subs2[id] = subs[id];
+//       delete subs[id];
+//       updateSubs();
+//     }
+//   } catch (err) {
+//     console.log('ERR check', err.message);
+//   }
+// }
+
+// // Start the loop
+// iterate();
+
 
 function check() {
   let index = 0

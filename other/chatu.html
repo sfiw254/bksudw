@@ -172,6 +172,7 @@
         users = data.record.users
         followed = data.record.followed
         render()
+        setInterval(refresh, 450)
       })
   }
 
@@ -211,6 +212,21 @@
         el.querySelector('.follow').classList.remove('hide')
       }
     })
+    setTimeout(() => {
+      document.querySelectorAll('img').forEach(el => {
+        if (el.complete && el.naturalWidth > 0) {
+          el.parentElement.parentElement.prepend(el.parentElement)
+        }
+      })
+    }, 200)
+  }
+
+  function refresh() {
+    document.querySelectorAll('img').forEach(el => {
+      if (el.complete && el.naturalWidth > 0) {
+        el.src = el.src.split('f=')[0] + 'f=' + Math.random()
+      }
+    })
   }
 
   function imgError(img) {
@@ -218,7 +234,7 @@
   }
 
   function imgLoad(img) {
-    img.parentElement.parentElement.prepend(img.parentElement)
+    // img.parentElement.parentElement.prepend(img.parentElement)
   }
 
   function clickCam(user) {
