@@ -1,22 +1,22 @@
-const fs = require('fs')
-const axios = require('axios')
-const express = require('express')
+const fs = require("fs")
+const axios = require("axios")
+const express = require("express")
 const app = express()
-let db = JSON.parse(fs.readFileSync('public/db.json', 'utf8'))
-let subs = JSON.parse(fs.readFileSync('subs.json', 'utf8'))
-let subs2 = JSON.parse(fs.readFileSync('subs2.json', 'utf8'))
+let db = JSON.parse(fs.readFileSync("public/db.json", "utf8"))
+let subs = JSON.parse(fs.readFileSync("subs.json", "utf8"))
+let subs2 = JSON.parse(fs.readFileSync("subs2.json", "utf8"))
 let history = {}
 
-app.use('/termini', express.static('public'))
-app.get('/termini/slots', (req, res) => routeSlots(req, res))
-app.get('/termini/sub', (req, res) => routeSub(req, res))
-app.get('/termini/unsub', (req, res) => routeUnsub(req, res))
+app.use("/termini", express.static("public"))
+app.get("/termini/slots", (req, res) => routeSlots(req, res))
+app.get("/termini/sub", (req, res) => routeSub(req, res))
+app.get("/termini/unsub", (req, res) => routeUnsub(req, res))
 
 // Log heap memory in MB every x seconds
 setInterval(() => {
-  const usedMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
-  console.log(`Memory: ${usedMB} MB`);
-}, 60000).unref(); // .unref() lets Node exit cleanly if the main loop stops
+  const usedMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
+  console.log(`Memory: ${usedMB} MB`)
+}, 60000).unref() // .unref() lets Node exit cleanly if the main loop stops
 
 app.listen(3000, () => {
   console.log(`Server is running on port 3000...`)
@@ -25,13 +25,13 @@ app.listen(3000, () => {
   check()
   check2()
 })
-
+db.for
 async function routeSlots(req, res) {
   try {
     const data = await getSlots(req.query.id)
     res.send(data)
   } catch (err) {
-    console.log('ERR routeSlots', err.message)
+    console.log("ERR routeSlots", err.message)
     res.status(400).send()
   }
 }
@@ -39,22 +39,22 @@ async function routeSlots(req, res) {
 function routeSub(req, res) {
   const { id, code, email } = req.query
   if (email && code && IDinfo(id) && !alreadySub()) {
-    subs[id] ? subs[id].push({ email, code }) : subs[id] = [{ email, code }]
+    subs[id] ? subs[id].push({ email, code }) : (subs[id] = [{ email, code }])
     updateSubs()
-    console.log('+1 sub ', IDinfo(id).name && IDinfo(id), email)
+    console.log("+1 sub ", IDinfo(id)?.name, email)
   }
-  res.send('ok')
+  res.send("ok")
 
   function alreadySub() {
     let isIt = false
     if (subs[id]) {
-      subs[id].forEach(el => {
-        email == el.email ? isIt = true : 0
+      subs[id].forEach((el) => {
+        email == el.email ? (isIt = true) : 0
       })
     }
     if (subs2[id]) {
-      subs2[id].forEach(el => {
-        email == el.email ? isIt = true : 0
+      subs2[id].forEach((el) => {
+        email == el.email ? (isIt = true) : 0
       })
     }
     return isIt
@@ -69,7 +69,7 @@ function routeUnsub(req, res) {
         subs[id].splice(index, 1)
         subs[id].length == 0 ? delete subs[id] : 0
         updateSubs()
-        console.log('-1 sub ', IDinfo(id).name && IDinfo(id), email)
+        console.log("-1 sub ", IDinfo(id)?.name, email)
       }
     })
   }
@@ -79,13 +79,12 @@ function routeUnsub(req, res) {
         subs2[id].splice(index, 1)
         subs2[id].length == 0 ? delete subs2[id] : 0
         updateSubs()
-        console.log('-1 sub', IDinfo(id).name && IDinfo(id), email)
+        console.log("-1 sub", IDinfo(id)?.name, email)
       }
     })
   }
   res.send('<h1>ok</h1><title>Исклучено</title><script>alert("Исклучено")</script>')
 }
-
 
 // async function iterate() {
 //   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -130,7 +129,6 @@ function routeUnsub(req, res) {
 //     }
 //   }
 // }
-
 
 // const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -181,7 +179,6 @@ function routeUnsub(req, res) {
 // // Start the loop
 // iterate();
 
-
 function check() {
   let index = 0
   const IDs = Object.keys(subs)
@@ -189,7 +186,7 @@ function check() {
 
   async function doCheck() {
     if (index == IDs.length) {
-      console.log('done')
+      console.log("done")
       check()
       return
     }
@@ -206,7 +203,7 @@ function check() {
       const name = data.name.slice(0, 60)
       let counter = 0
       for (const property in data.timeslots) {
-        data.timeslots[property].forEach(el => {
+        data.timeslots[property].forEach((el) => {
           el.isAvailable ? counter++ : 0
         })
       }
@@ -218,7 +215,7 @@ function check() {
         updateSubs()
       }
     } catch (err) {
-      console.log('ERR doCheck', err.message)
+      console.log("ERR doCheck", err.message)
     }
   }
 }
@@ -246,18 +243,18 @@ function check2() {
       const name = data.name.slice(0, 60)
       let counter = 0
       for (const property in data.timeslots) {
-        data.timeslots[property].forEach(el => {
+        data.timeslots[property].forEach((el) => {
           el.isAvailable ? counter++ : 0
         })
       }
-      console.log(counter, name, '2')
+      console.log(counter, name, "2")
       if (counter == 0) {
         subs[id] = subs2[id]
         delete subs2[id]
         updateSubs()
       }
     } catch (err) {
-      console.log('ERR doCheck2', err.message)
+      console.log("ERR doCheck2", err.message)
     }
   }
 }
@@ -279,7 +276,7 @@ async function getSlots(id) {
 }
 
 function notify(id, name) {
-  subs[id].forEach(el => {
+  subs[id].forEach((el) => {
     const subject = `${name} има нови термини`
     const plain = `${name} има нови термини:
 https://sfiw.onrender.com/termini/slots.html?id=${id}
@@ -294,25 +291,28 @@ https://sfiw.onrender.com/termini/unsub?id=${id}&email=${el.email}&code=${el.cod
 
 function sendMaileroo(to, subject, plain) {
   const config = {
-    "from": {
-      "address": "sfiw@546efd10e8c3419e.maileroo.org",
-      "display_name": "sfiw.onrender.com"
+    from: {
+      address: "sfiw@546efd10e8c3419e.maileroo.org",
+      display_name: "sfiw.onrender.com"
     },
-    "to": [{
-      "address": to
-    }],
-    "subject": subject,
-    "plain": plain
+    to: [
+      {
+        address: to
+      }
+    ],
+    subject: subject,
+    plain: plain
   }
-  axios.post('https://smtp.maileroo.com/api/v2/emails', config, {
+  axios
+    .post("https://smtp.maileroo.com/api/v2/emails", config, {
       signal: AbortSignal.timeout(4000),
       headers: {
         "Content-Type": "application/json",
-        "X-Api-Key": '096308984c35ee8ed28cb5c34ecd5d34f71ce1fb522d1cf282d064e9ec9cab6f'
+        "X-Api-Key": "096308984c35ee8ed28cb5c34ecd5d34f71ce1fb522d1cf282d064e9ec9cab6f"
       }
     })
-    .then(res => console.log('maileroo', res.status))
-    .catch(err => console.log('ERR maileroo ', err.message))
+    .then((res) => console.log("maileroo", res.status))
+    .catch((err) => console.log("ERR maileroo ", err.message))
 }
 
 function filterSubs(req, res) {
@@ -321,9 +321,9 @@ function filterSubs(req, res) {
     return
   }
   for (const property in subs) {
-    subs[property].forEach(el => {
+    subs[property].forEach((el) => {
       if (el.email == req.query.email) {
-        let url = `https://sfiw.onrender.com/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
+        let url = `https://sfiw.onrender.com/termini/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
         list.unshift({ name: IDinfo(property).name, url: url })
       }
     })
@@ -336,15 +336,15 @@ async function updateDB() {
   if (!shouldCheck()) {
     return
   }
-  console.log('updating DB...')
+  console.log("updating DB...")
   try {
-    const res = await axios('https://mojtermin.mk/api/pp/side_navigation')
+    const res = await axios("https://mojtermin.mk/api/pp/side_navigation")
     const data = res.data
     const newDb = []
-    data[0].subsections.forEach(specijalnost => {
-      specijalnost.subsections.forEach(lokacija => {
-        lokacija.subsections.forEach(ustanova => {
-          ustanova.subsections.forEach(doktor => {
+    data[0].subsections.forEach((specijalnost) => {
+      specijalnost.subsections.forEach((lokacija) => {
+        lokacija.subsections.forEach((ustanova) => {
+          ustanova.subsections.forEach((doktor) => {
             newDb.push({
               id: doktor.id,
               name: doktor.name,
@@ -357,11 +357,11 @@ async function updateDB() {
           })
         })
       })
-    });
-    data[1].subsections.forEach(tip => {
-      tip.subsections.forEach(lokacija => {
-        lokacija.subsections.forEach(ustanova => {
-          ustanova.subsections.forEach(aparat => {
+    })
+    data[1].subsections.forEach((tip) => {
+      tip.subsections.forEach((lokacija) => {
+        lokacija.subsections.forEach((ustanova) => {
+          ustanova.subsections.forEach((aparat) => {
             newDb.push({
               id: aparat.id,
               name: aparat.name,
@@ -374,53 +374,57 @@ async function updateDB() {
           })
         })
       })
-    });
+    })
     db = [...newDb]
-    fs.writeFileSync('public/db.json', JSON.stringify(db))
-    console.log('updateDB', res.status)
+    fs.writeFileSync("public/db.json", JSON.stringify(db))
+    console.log("updateDB", res.status)
   } catch (err) {
-    console.log('ERR updateDB', err.message)
+    console.log("ERR updateDB", err.message)
   }
 }
 
 function updateSubs() {
-  fs.writeFileSync('subs.json', JSON.stringify(subs))
-  fs.writeFileSync('subs2.json', JSON.stringify(subs2))
-  axios.put('https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82', {
-      subs: subs,
-      subs2: subs2
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
+  fs.writeFileSync("subs.json", JSON.stringify(subs))
+  fs.writeFileSync("subs2.json", JSON.stringify(subs2))
+  axios
+    .put(
+      "https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82",
+      {
+        subs: subs,
+        subs2: subs2
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+        }
       }
-    })
-    .then(res => console.log('updateSubs', res.status))
-    .catch(err => console.log('ERR updateSubs', err.message))
+    )
+    .then((res) => console.log("updateSubs", res.status))
+    .catch((err) => console.log("ERR updateSubs", err.message))
 }
 
-
 function readSubs() {
-  console.log('reading subs...')
-  axios('https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
-      }
-    })
-    .then(res => {
+  console.log("reading subs...")
+  axios("https://api.jsonbin.io/v3/b/6a96b3a9da38895dfe2a8a82", {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+    }
+  })
+    .then((res) => {
       subs = res.data.record.subs
       subs2 = res.data.record.subs2
-      fs.writeFileSync('subs.json', JSON.stringify(subs))
-      fs.writeFileSync('subs2.json', JSON.stringify(subs2))
-      console.log('readSubs', res.status)
+      fs.writeFileSync("subs.json", JSON.stringify(subs))
+      fs.writeFileSync("subs2.json", JSON.stringify(subs2))
+      console.log("readSubs", res.status)
     })
-    .catch(err => console.log('ERR readSubs', err.message))
+    .catch((err) => console.log("ERR readSubs", err.message))
 }
 
 function IDinfo(id) {
   let info
-  db.forEach(el => {
+  db.forEach((el) => {
     if (el.id == id) {
       info = {
         name: el.name,
@@ -436,10 +440,10 @@ function IDinfo(id) {
 }
 
 function updateAvailability(data) {
-  db.forEach(el => {
+  db.forEach((el) => {
     if (el.id == data.id) {
       el.availability = availability
-      console.log(el.name, ' new avail ', availability)
+      console.log(el.name, " new avail ", availability)
     }
   })
 }
@@ -447,9 +451,8 @@ function updateAvailability(data) {
 function firstAvailable(data) {
   let first
   for (const property in data.timeslots) {
-    data.timeslots[property].forEach(el => {
+    data.timeslots[property].forEach((el) => {
       if (el.isAvailable) {
-
       }
     })
   }
@@ -480,16 +483,16 @@ function shouldCheck() {
   }
 }
 
-setInterval(function() {
-  axios('https://sfiw.onrender.com')
-    .then(res => res)
-    .catch(err => err)
+setInterval(function () {
+  axios("https://sfiw.onrender.com")
+    .then((res) => res)
+    .catch((err) => err)
 }, 454938)
 
-setInterval(function() {
-  axios('https://sfiw.onrender.com')
-    .then(res => res)
-    .catch(err => err)
+setInterval(function () {
+  axios("https://sfiw.onrender.com")
+    .then((res) => res)
+    .catch((err) => err)
 }, 834782)
 
 // $2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK key
@@ -499,12 +502,11 @@ setInterval(function() {
 // 6a96b3d2f5f4af5e295c14db bin4
 // 6a96b3e9da38895dfe2a8bc9 bin5
 
-
 ///////////////////////////////////////////////////////chatu
-app.use(express.static('other'))
+app.use(express.static("other"))
 
 let users, followed
-app.get('/chatu', (req, res) => routeChatu(req, res))
+app.get("/chatu", (req, res) => routeChatu(req, res))
 
 readFollowed()
 
@@ -513,66 +515,74 @@ function routeChatu(req, res) {
     if (req.query.data) {
       const parsed = JSON.parse(req.query.data)
       if (!Array.isArray(parsed.followed) || !Array.isArray(parsed.users) || !parsed.users.length || !parsed.followed.length) {
-        throw new Error('invalid data')
+        throw new Error("invalid data")
       }
       users = parsed.users
       followed = parsed.followed
       res.send(followed)
     } else {
-      res.send('u lost?')
+      res.send("u lost?")
     }
   } catch (err) {
-    console.log('ERR routeChatu', err.message)
-    res.status(400).send('invalid data')
-
+    console.log("ERR routeChatu", err.message)
+    res.status(400).send("invalid data")
   }
 }
 
 function checkFollowed() {
-  followed.forEach(el => {
+  followed.forEach((el) => {
     axios(`https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}`, {
-        signal: AbortSignal.timeout(4000)
-      })
-      .then(res => {
+      signal: AbortSignal.timeout(4000)
+    })
+      .then((res) => {
         console.log(el, res.status)
         if (res.status == 200) {
-          sendMaileroo('sfiw@proton.me', `${el} is online`, `${el} is online:
-https://chaturbate.com/${el}`)
+          sendMaileroo(
+            "sfiw@proton.me",
+            `${el} is online`,
+            `${el} is online:
+https://chaturbate.com/${el}`
+          )
           // console.log('mock notify', el)
-          followed = followed.filter(elt => elt !== el)
+          followed = followed.filter((elt) => elt !== el)
           updateFollowed()
         }
       })
-      .catch(err => console.log('ERR checkFollowed', err.message))
+      .catch((err) => console.log("ERR checkFollowed", err.message))
   })
 }
 
 function readFollowed() {
-  axios('https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
-      }
-    })
-    .then(res => {
+  axios("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+    }
+  })
+    .then((res) => {
       followed = res.data.record.followed
       users = res.data.record.users
       checkFollowed()
       setInterval(checkFollowed, 1000 * 60)
     })
-    .catch(err => console.log('ERR readFollowed', err.message))
+    .catch((err) => console.log("ERR readFollowed", err.message))
 }
 
 function updateFollowed() {
-  axios.put('https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9', {
-      users,
-      followed
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
+  axios
+    .put(
+      "https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9",
+      {
+        users,
+        followed
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+        }
       }
-    })
-    .then(res => res)
-    .catch(err => console.log('ERR readFollowed', err.message))
+    )
+    .then((res) => res)
+    .catch((err) => console.log("ERR readFollowed", err.message))
 }
