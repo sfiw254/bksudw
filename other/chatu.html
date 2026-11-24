@@ -172,7 +172,7 @@
         users = data.record.users
         followed = data.record.followed
         render()
-        setInterval(refresh, 450)
+        setInterval(refresh, 500)
       })
   }
 
@@ -218,7 +218,7 @@
           el.parentElement.parentElement.prepend(el.parentElement)
         }
       })
-    }, 200)
+    }, 500)
   }
 
   function refresh() {
