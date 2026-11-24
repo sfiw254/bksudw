@@ -1,233 +1,243 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>3D Turntable Cube</title>
-  <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-    background-color: #111;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    font-family: sans-serif;
-    cursor: grab;
-    touch-action: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  body:active {
-    cursor: grabbing;
-  }
-
-  .scene {
-    width: 200px;
-    height: 200px;
-    perspective: 320px;
-    perspective-origin: 50% 50%;
-  }
-
-  .cube {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    /* Promotes the cube to its own hardware-accelerated GPU layer */
-    will-change: transform;
-  }
-
-  .face {
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    border: 2px solid #00ffcc;
-    /* Radial gradient mimics the inner glow without expensive per-frame box-shadow repaints on mobile */
-    background: radial-gradient(circle, rgba(12, 65, 58, 0.72) 55%, rgba(0, 180, 145, 0.45) 100%);
-    color: #fff;
-    font-size: 24px;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
-  }
-
-  .front {
-    transform: rotateY(0deg) translateZ(100px);
-  }
-
-  .back {
-    transform: rotateY(180deg) translateZ(100px);
-  }
-
-  .right {
-    transform: rotateY(90deg) translateZ(100px);
-  }
-
-  .left {
-    transform: rotateY(-90deg) translateZ(100px);
-  }
-
-  .top {
-    transform: rotateX(90deg) translateZ(100px);
-  }
-
-  .bottom {
-    transform: rotateX(-90deg) translateZ(100px);
-  }
-  </style>
-</head>
-
-<body>
-  <div class="scene">
-    <div class="cube" id="cube">
-      <div class="face front">FRONT</div>
-      <div class="face back">BACK</div>
-      <div class="face right">RIGHT</div>
-      <div class="face left">LEFT</div>
-      <div class="face top">TOP</div>
-      <div class="face bottom">BOTTOM</div>
-    </div>
-  </div>
-  <script>
-  const cube = document.getElementById('cube');
-
-  let isDragging = false;
-  let previousX = 0;
-  let previousY = 0;
-
-  // Turntable angles and camera Z-distance
-  let yaw = 30;
-  let pitch = -20;
-  let zoomZ = 0;
-
-  // Pinch tracking
-  let initialPinchDistance = 0;
-  let initialZoomZ = 0;
-
-  // Render loop state
-  let needsRender = true;
-
-  function renderLoop() {
-    if (needsRender) {
-      cube.style.transform = `translateZ(${zoomZ}px) rotateX(${pitch}deg) rotateY(${yaw}deg)`;
-      needsRender = false;
-    }
-    requestAnimationFrame(renderLoop);
-  }
-
-  // Start smooth display-synced loop
-  requestAnimationFrame(renderLoop);
-
-  // --- DESKTOP MOUSE CONTROLS ---
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-      isDragging = true;
-      previousX = e.clientX;
-      previousY = e.clientY;
-    }
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-
-    const deltaX = e.clientX - previousX;
-    const deltaY = e.clientY - previousY;
-
-    yaw += deltaX * 0.5;
-    pitch -= deltaY * 0.5;
-    pitch = Math.max(-85, Math.min(85, pitch));
-
-    needsRender = true;
-
-    previousX = e.clientX;
-    previousY = e.clientY;
-  });
-
-  document.addEventListener('mouseup', (e) => {
-    if (e.button === 0) {
-      isDragging = false;
-    }
-  });
-
-  document.addEventListener('mouseleave', () => {
-    isDragging = false;
-  });
-
-  // --- DESKTOP SCROLL ZOOM ---
-  document.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    zoomZ -= e.deltaY * 0.35;
-    zoomZ = Math.max(-450, Math.min(115, zoomZ));
-    needsRender = true;
-  }, { passive: false });
-
-  // --- MOBILE TOUCH & PINCH CONTROLS ---
-  function getTouchDistance(touches) {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.hypot(dx, dy);
-  }
-
-  document.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) {
-      isDragging = true;
-      previousX = e.touches[0].clientX;
-      previousY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-      isDragging = false;
-      initialPinchDistance = getTouchDistance(e.touches);
-      initialZoomZ = zoomZ;
-    }
-  }, { passive: false });
-
-  document.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-
-    if (e.touches.length === 1 && isDragging) {
-      const deltaX = e.touches[0].clientX - previousX;
-      const deltaY = e.touches[0].clientY - previousY;
-
-      yaw += deltaX * 0.5;
-      pitch -= deltaY * 0.5;
-      pitch = Math.max(-85, Math.min(85, pitch));
-
-      needsRender = true;
-
-      previousX = e.touches[0].clientX;
-      previousY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-      const currentDistance = getTouchDistance(e.touches);
-      if (initialPinchDistance > 0) {
-        const pinchDelta = currentDistance - initialPinchDistance;
-        zoomZ = Math.max(-450, Math.min(115, initialZoomZ + pinchDelta * 1.2));
-        needsRender = true;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>3D Turntable Cube</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-    }
-  }, { passive: false });
 
-  document.addEventListener('touchend', (e) => {
-    if (e.touches.length === 0) {
-      isDragging = false;
-    } else if (e.touches.length === 1) {
-      isDragging = true;
-      previousX = e.touches[0].clientX;
-      previousY = e.touches[0].clientY;
-    }
-  });
-  </script>
-</body>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background-color: #111;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        font-family: sans-serif;
+        cursor: grab;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
 
+      body:active {
+        cursor: grabbing;
+      }
+
+      .scene {
+        width: 200px;
+        height: 200px;
+        perspective: 320px;
+        perspective-origin: 50% 50%;
+      }
+
+      .cube {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        /* Promotes the cube to its own hardware-accelerated GPU layer */
+        will-change: transform;
+      }
+
+      .face {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        border: 2px solid #00ffcc;
+        /* Radial gradient mimics the inner glow without expensive per-frame box-shadow repaints on mobile */
+        background: radial-gradient(circle, rgba(12, 65, 58, 0.72) 55%, rgba(0, 180, 145, 0.45) 100%);
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+      }
+
+      .front {
+        transform: rotateY(0deg) translateZ(100px);
+      }
+
+      .back {
+        transform: rotateY(180deg) translateZ(100px);
+      }
+
+      .right {
+        transform: rotateY(90deg) translateZ(100px);
+      }
+
+      .left {
+        transform: rotateY(-90deg) translateZ(100px);
+      }
+
+      .top {
+        transform: rotateX(90deg) translateZ(100px);
+      }
+
+      .bottom {
+        transform: rotateX(-90deg) translateZ(100px);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="scene">
+      <div class="cube" id="cube">
+        <div class="face front">FRONT</div>
+        <div class="face back">BACK</div>
+        <div class="face right">RIGHT</div>
+        <div class="face left">LEFT</div>
+        <div class="face top">TOP</div>
+        <div class="face bottom">BOTTOM</div>
+      </div>
+    </div>
+    <script>
+      const cube = document.getElementById("cube")
+
+      let isDragging = false
+      let previousX = 0
+      let previousY = 0
+
+      // Turntable angles and camera Z-distance
+      let yaw = 30
+      let pitch = -20
+      let zoomZ = 0
+
+      // Pinch tracking
+      let initialPinchDistance = 0
+      let initialZoomZ = 0
+
+      // Render loop state
+      let needsRender = true
+
+      function renderLoop() {
+        if (needsRender) {
+          cube.style.transform = `translateZ(${zoomZ}px) rotateX(${pitch}deg) rotateY(${yaw}deg)`
+          needsRender = false
+        }
+        requestAnimationFrame(renderLoop)
+      }
+
+      // Start smooth display-synced loop
+      requestAnimationFrame(renderLoop)
+
+      // --- DESKTOP MOUSE CONTROLS ---
+      document.addEventListener("mousedown", (e) => {
+        if (e.button === 0) {
+          isDragging = true
+          previousX = e.clientX
+          previousY = e.clientY
+        }
+      })
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return
+
+        const deltaX = e.clientX - previousX
+        const deltaY = e.clientY - previousY
+
+        yaw += deltaX * 0.5
+        pitch -= deltaY * 0.5
+        pitch = Math.max(-85, Math.min(85, pitch))
+
+        needsRender = true
+
+        previousX = e.clientX
+        previousY = e.clientY
+      })
+
+      document.addEventListener("mouseup", (e) => {
+        if (e.button === 0) {
+          isDragging = false
+        }
+      })
+
+      document.addEventListener("mouseleave", () => {
+        isDragging = false
+      })
+
+      // --- DESKTOP SCROLL ZOOM ---
+      document.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault()
+          zoomZ -= e.deltaY * 0.35
+          zoomZ = Math.max(-450, Math.min(115, zoomZ))
+          needsRender = true
+        },
+        { passive: false }
+      )
+
+      // --- MOBILE TOUCH & PINCH CONTROLS ---
+      function getTouchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX
+        const dy = touches[0].clientY - touches[1].clientY
+        return Math.hypot(dx, dy)
+      }
+
+      document.addEventListener(
+        "touchstart",
+        (e) => {
+          if (e.touches.length === 1) {
+            isDragging = true
+            previousX = e.touches[0].clientX
+            previousY = e.touches[0].clientY
+          } else if (e.touches.length === 2) {
+            isDragging = false
+            initialPinchDistance = getTouchDistance(e.touches)
+            initialZoomZ = zoomZ
+          }
+        },
+        { passive: false }
+      )
+
+      document.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault()
+
+          if (e.touches.length === 1 && isDragging) {
+            const deltaX = e.touches[0].clientX - previousX
+            const deltaY = e.touches[0].clientY - previousY
+
+            yaw += deltaX * 0.5
+            pitch -= deltaY * 0.5
+            pitch = Math.max(-85, Math.min(85, pitch))
+
+            needsRender = true
+
+            previousX = e.touches[0].clientX
+            previousY = e.touches[0].clientY
+          } else if (e.touches.length === 2) {
+            const currentDistance = getTouchDistance(e.touches)
+            if (initialPinchDistance > 0) {
+              const pinchDelta = currentDistance - initialPinchDistance
+              zoomZ = Math.max(-450, Math.min(115, initialZoomZ + pinchDelta * 1.2))
+              needsRender = true
+            }
+          }
+        },
+        { passive: false }
+      )
+
+      document.addEventListener("touchend", (e) => {
+        if (e.touches.length === 0) {
+          isDragging = false
+        } else if (e.touches.length === 1) {
+          isDragging = true
+          previousX = e.touches[0].clientX
+          previousY = e.touches[0].clientY
+        }
+      })
+    </script>
+  </body>
 </html>

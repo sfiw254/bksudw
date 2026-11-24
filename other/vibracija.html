@@ -1,159 +1,217 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="mk">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Remote Vibe</title>
-  <style>
-    body {
-            margin: 0; padding: 20px; background-color: #121212; color: #ffffff;
-            font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box;
-        }
-        .container { text-align: center; max-width: 400px; width: 100%; }
-        h1 { color: #e91e63; letter-spacing: 2px; }
-        .section { background: #1e1e1e; padding: 15px; margin: 15px 0; border-radius: 10px; }
-        input { width: 80%; padding: 10px; border: 1px solid #333; background: #2b2b2b; color: white; border-radius: 5px; text-align: center; font-size: 1rem; margin-bottom: 10px; }
-        .action-btn { background: #e91e63; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        #vibeBtn { width: 180px; height: 180px; border-radius: 50%; border: none; font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
-        #vibeBtn:disabled { background-color: #444; color: #888; cursor: not-allowed; }
-        #vibeBtn.off { background-color: #880e4f; color: white; box-shadow: 0 0 15px #880e4f; }
-        #vibeBtn.on { background-color: #e91e63; color: white; box-shadow: 0 0 35px #e91e63; transform: scale(1.05); }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remote Vibe</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background-color: #121212;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+      .container {
+        text-align: center;
+        max-width: 400px;
+        width: 100%;
+      }
+      h1 {
+        color: #e91e63;
+        letter-spacing: 2px;
+      }
+      .section {
+        background: #1e1e1e;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 10px;
+      }
+      input {
+        width: 80%;
+        padding: 10px;
+        border: 1px solid #333;
+        background: #2b2b2b;
+        color: white;
+        border-radius: 5px;
+        text-align: center;
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+      .action-btn {
+        background: #e91e63;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      #vibeBtn {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      #vibeBtn:disabled {
+        background-color: #444;
+        color: #888;
+        cursor: not-allowed;
+      }
+      #vibeBtn.off {
+        background-color: #880e4f;
+        color: white;
+        box-shadow: 0 0 15px #880e4f;
+      }
+      #vibeBtn.on {
+        background-color: #e91e63;
+        color: white;
+        box-shadow: 0 0 35px #e91e63;
+        transform: scale(1.05);
+      }
     </style>
-  <!-- СТАВИ ГО ТУКА ЛИНКОТ ДО PEERJS БЕЗ ПРАЗНИ МЕСТА -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-</head>
+    <!-- СТАВИ ГО ТУКА ЛИНКОТ ДО PEERJS БЕЗ ПРАЗНИ МЕСТА -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  </head>
 
-<body>
-  <div class="container">
-    <h1>Remote Vibe</h1>
-    <div class="section">
-      <input type="text" id="room-id" placeholder="Внеси име на соба">
-      <button id="connectBtn" class="action-btn">Влези во соба</button>
-      <p id="status">Статус: Не си поврзан</p>
+  <body>
+    <div class="container">
+      <h1>Remote Vibe</h1>
+      <div class="section">
+        <input type="text" id="room-id" placeholder="Внеси име на соба" />
+        <button id="connectBtn" class="action-btn">Влези во соба</button>
+        <p id="status">Статус: Не си поврзан</p>
+      </div>
+      <div class="section">
+        <button id="vibeBtn" class="off" disabled>ВКЛУЧИ</button>
+      </div>
     </div>
-    <div class="section">
-      <button id="vibeBtn" class="off" disabled>ВКЛУЧИ</button>
-    </div>
-  </div>
-  <script>
-  const roomIdInput = document.getElementById('room-id');
-  const connectBtn = document.getElementById('connectBtn');
-  const statusDisplay = document.getElementById('status');
-  const vibeBtn = document.getElementById('vibeBtn');
+    <script>
+      const roomIdInput = document.getElementById("room-id")
+      const connectBtn = document.getElementById("connectBtn")
+      const statusDisplay = document.getElementById("status")
+      const vibeBtn = document.getElementById("vibeBtn")
 
-  let peer = null;
-  let conn = null;
-  let vibrateInterval;
-  let isVibrating = false;
+      let peer = null
+      let conn = null
+      let vibrateInterval
+      let isVibrating = false
 
-  connectBtn.addEventListener('click', () => {
-    const roomName = roomIdInput.value.trim().toLowerCase();
-    if (!roomName) return alert("Внеси име на соба!");
+      connectBtn.addEventListener("click", () => {
+        const roomName = roomIdInput.value.trim().toLowerCase()
+        if (!roomName) return alert("Внеси име на соба!")
 
-    statusDisplay.textContent = "Се поврзувам...";
-    if (peer) peer.destroy();
+        statusDisplay.textContent = "Се поврзувам..."
+        if (peer) peer.destroy()
 
-    // Пробуваме да ја креираме собата со тоа име
-    peer = new Peer(roomName);
+        // Пробуваме да ја креираме собата со тоа име
+        peer = new Peer(roomName)
 
-    peer.on('open', (id) => {
-      statusDisplay.textContent = "Ја креираше собата: " + id + ". Чекаме партнер...";
-      statusDisplay.style.color = "#ffb300";
-    });
+        peer.on("open", (id) => {
+          statusDisplay.textContent = "Ја креираше собата: " + id + ". Чекаме партнер..."
+          statusDisplay.style.color = "#ffb300"
+        })
 
-    // Ако некој друг ја креирал пред нас, PeerJS ќе фрли грешка 'unavailable-id'
-    peer.on('error', (err) => {
-      if (err.type === 'unavailable-id') {
-        // Тоа значи дека собата постои, па автоматски се поврзуваме во неа како гостин
-        statusDisplay.textContent = "Собата е зафатена, се поврзувам како партнер...";
-        peer.destroy();
+        // Ако некој друг ја креирал пред нас, PeerJS ќе фрли грешка 'unavailable-id'
+        peer.on("error", (err) => {
+          if (err.type === "unavailable-id") {
+            // Тоа значи дека собата постои, па автоматски се поврзуваме во неа како гостин
+            statusDisplay.textContent = "Собата е зафатена, се поврзувам како партнер..."
+            peer.destroy()
 
-        // Креираме нов peer со рандом ID за да се врземе кај него
-        peer = new Peer();
-        peer.on('open', () => {
-          conn = peer.connect(roomName);
-          setupConnection();
-        });
-      } else {
-        console.error(err);
-        statusDisplay.textContent = "Мрежна грешка.";
-        statusDisplay.style.color = "#f44336";
+            // Креираме нов peer со рандом ID за да се врземе кај него
+            peer = new Peer()
+            peer.on("open", () => {
+              conn = peer.connect(roomName)
+              setupConnection()
+            })
+          } else {
+            console.error(err)
+            statusDisplay.textContent = "Мрежна грешка."
+            statusDisplay.style.color = "#f44336"
+          }
+        })
+
+        // Ако ние сме домаќинот и некој се врзе кај нас
+        peer.on("connection", (connection) => {
+          conn = connection
+          setupConnection()
+        })
+      })
+
+      function setupConnection() {
+        // Кога врската конечно ќе се отвори
+        const onOpen = () => {
+          statusDisplay.textContent = "Поврзан со партнерот!"
+          statusDisplay.style.color = "#4caf50"
+          vibeBtn.disabled = false
+
+          if (navigator.vibrate) {
+            navigator.vibrate(50) // Отклучување на вибрација со прв допир
+          }
+        }
+
+        if (conn.open) onOpen()
+        else conn.on("open", onOpen)
+
+        conn.on("data", (data) => {
+          if (data === "ON") startVibration()
+          else if (data === "OFF") stopVibration()
+        })
+
+        conn.on("close", () => {
+          statusDisplay.textContent = "Врската прекина."
+          statusDisplay.style.color = "#f44336"
+          vibeBtn.disabled = true
+          stopVibration()
+        })
       }
-    });
 
-    // Ако ние сме домаќинот и некој се врзе кај нас
-    peer.on('connection', (connection) => {
-      conn = connection;
-      setupConnection();
-    });
-  });
+      vibeBtn.addEventListener("click", () => {
+        if (!conn) return
+        if (!isVibrating) {
+          isVibrating = true
+          vibeBtn.textContent = "ИСКЛУЧИ"
+          vibeBtn.className = "on"
+          conn.send("ON")
+        } else {
+          isVibrating = false
+          vibeBtn.textContent = "ВКЛУЧИ"
+          vibeBtn.className = "off"
+          conn.send("OFF")
+        }
+      })
 
-  function setupConnection() {
-    // Кога врската конечно ќе се отвори
-    const onOpen = () => {
-      statusDisplay.textContent = "Поврзан со партнерот!";
-      statusDisplay.style.color = "#4caf50";
-      vibeBtn.disabled = false;
+      function startVibration() {
+        if (!navigator.vibrate) return
+        vibeBtn.textContent = "ИСКЛУЧИ"
+        vibeBtn.className = "on"
+        isVibrating = true
 
-      if (navigator.vibrate) {
-        navigator.vibrate(50); // Отклучување на вибрација со прв допир
+        navigator.vibrate(1000)
+        clearInterval(vibrateInterval)
+        vibrateInterval = setInterval(() => {
+          navigator.vibrate(1000)
+        }, 1200)
       }
-    };
 
-    if (conn.open) onOpen();
-    else conn.on('open', onOpen);
+      function stopVibration() {
+        vibeBtn.textContent = "ВКЛУЧИ"
+        vibeBtn.className = "off"
+        isVibrating = false
 
-    conn.on('data', (data) => {
-      if (data === 'ON') startVibration();
-      else if (data === 'OFF') stopVibration();
-    });
-
-    conn.on('close', () => {
-      statusDisplay.textContent = "Врската прекина.";
-      statusDisplay.style.color = "#f44336";
-      vibeBtn.disabled = true;
-      stopVibration();
-    });
-  }
-
-  vibeBtn.addEventListener('click', () => {
-    if (!conn) return;
-    if (!isVibrating) {
-      isVibrating = true;
-      vibeBtn.textContent = "ИСКЛУЧИ";
-      vibeBtn.className = "on";
-      conn.send('ON');
-    } else {
-      isVibrating = false;
-      vibeBtn.textContent = "ВКЛУЧИ";
-      vibeBtn.className = "off";
-      conn.send('OFF');
-    }
-  });
-
-  function startVibration() {
-    if (!navigator.vibrate) return;
-    vibeBtn.textContent = "ИСКЛУЧИ";
-    vibeBtn.className = "on";
-    isVibrating = true;
-
-    navigator.vibrate(1000);
-    clearInterval(vibrateInterval);
-    vibrateInterval = setInterval(() => {
-      navigator.vibrate(1000);
-    }, 1200);
-  }
-
-  function stopVibration() {
-    vibeBtn.textContent = "ВКЛУЧИ";
-    vibeBtn.className = "off";
-    isVibrating = false;
-
-    clearInterval(vibrateInterval);
-    if (navigator.vibrate) navigator.vibrate(0);
-  }
-  </script>
-</body>
-
+        clearInterval(vibrateInterval)
+        if (navigator.vibrate) navigator.vibrate(0)
+      }
+    </script>
+  </body>
 </html>

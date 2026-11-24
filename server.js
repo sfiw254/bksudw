@@ -25,7 +25,7 @@ app.listen(3000, () => {
   check()
   check2()
 })
-db.for
+
 async function routeSlots(req, res) {
   try {
     const data = await getSlots(req.query.id)
@@ -315,21 +315,21 @@ function sendMaileroo(to, subject, plain) {
     .catch((err) => console.log("ERR maileroo ", err.message))
 }
 
-function filterSubs(req, res) {
-  let list = []
-  if (!req.query.email) {
-    return
-  }
-  for (const property in subs) {
-    subs[property].forEach((el) => {
-      if (el.email == req.query.email) {
-        let url = `https://sfiw.onrender.com/termini/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
-        list.unshift({ name: IDinfo(property).name, url: url })
-      }
-    })
-  }
-  res.send(list)
-}
+// function filterSubs(req, res) {
+//   let list = []
+//   if (!req.query.email) {
+//     return
+//   }
+//   for (const property in subs) {
+//     subs[property].forEach((el) => {
+//       if (el.email == req.query.email) {
+//         let url = `https://sfiw.onrender.com/termini/unsub?id=${property}&email=${req.query.email}&code=${el.code}`
+//         list.unshift({ name: IDinfo(property).name, url: url })
+//       }
+//     })
+//   }
+//   res.send(list)
+// }
 
 async function updateDB() {
   setTimeout(updateDB, 1000 * 60 * 15)
@@ -439,43 +439,42 @@ function IDinfo(id) {
   return info
 }
 
-function updateAvailability(data) {
-  db.forEach((el) => {
-    if (el.id == data.id) {
-      el.availability = availability
-      console.log(el.name, " new avail ", availability)
-    }
-  })
-}
+// function updateAvailability(data) {
+//   db.forEach((el) => {
+//     if (el.id == data.id) {
+//       el.availability = availability
+//       console.log(el.name, " new avail ", availability)
+//     }
+//   })
+// }
 
-function firstAvailable(data) {
-  let first
-  for (const property in data.timeslots) {
-    data.timeslots[property].forEach((el) => {
-      if (el.isAvailable) {
-      }
-    })
-  }
-}
+// function firstAvailable(data) {
+//   let first
+//   for (const property in data.timeslots) {
+//     data.timeslots[property].forEach((el) => {
+//       if (el.isAvailable) {
+//       }
+//     })
+//   }
+// }
 
-function daysToDate(days) {
-  const today = new Date()
-  today.setDate(today.getDate() + days)
-  return today
-}
+// function daysToDate(days) {
+//   const today = new Date()
+//   today.setDate(today.getDate() + days)
+//   return today
+// }
 
-function dateToDays(date) {
-  const today = new Date()
-  const target = new Date(date)
-  today.setHours(0, 0, 0, 0)
-  target.setHours(0, 0, 0, 0)
-  return (target - today) / 86400000
-}
+// function dateToDays(date) {
+//   const today = new Date()
+//   const target = new Date(date)
+//   today.setHours(0, 0, 0, 0)
+//   target.setHours(0, 0, 0, 0)
+//   return (target - today) / 86400000
+// }
 
 function shouldCheck() {
   const day = new Date().getDay()
   const hour = new Date().getHours()
-  const minute = new Date().getMinutes()
   if (!day || hour < 6 || hour > 19) {
     return false
   } else {

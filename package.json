@@ -15,13 +15,6 @@
     "express": "^5.2.1"
   },
   "nodemonConfig": {
-    "ignore": [
-      "public/",
-      "chatu/",
-      "tenk_protiv_avioni/",
-      "db.json",
-      "subs.json",
-      "subs2.json"
-    ]
+    "ignore": ["public/", "chatu/", "tenk_protiv_avioni/", "db.json", "subs.json", "subs2.json"]
   }
 }

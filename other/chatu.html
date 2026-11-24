@@ -1,292 +1,291 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatu</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chatu</title>
-  <style>
-  * {
-    box-sizing: border-box;
-  }
+      body {
+        background-color: #0f172a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        margin: 0;
+        padding: 1rem;
+      }
 
-  body {
-    background-color: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    margin: 0;
-    padding: 1rem;
-  }
+      body > div:first-of-type {
+        display: flex;
+        gap: 0.5rem;
+        max-width: 450px;
+        margin: 0 auto 1.25rem auto;
+      }
 
-  body>div:first-of-type {
-    display: flex;
-    gap: 0.5rem;
-    max-width: 450px;
-    margin: 0 auto 1.25rem auto;
-  }
+      input {
+        flex: 1;
+        padding: 0.6rem 0.85rem;
+        border: 1px solid #334155;
+        border-radius: 0.45rem;
+        background-color: #1e293b;
+        color: #f8fafc;
+        font-size: 0.95rem;
+        outline: none;
+      }
 
-  input {
-    flex: 1;
-    padding: 0.6rem 0.85rem;
-    border: 1px solid #334155;
-    border-radius: 0.45rem;
-    background-color: #1e293b;
-    color: #f8fafc;
-    font-size: 0.95rem;
-    outline: none;
-  }
+      input:focus {
+        border-color: #38bdf8;
+      }
 
-  input:focus {
-    border-color: #38bdf8;
-  }
+      .add {
+        padding: 0.6rem 1.1rem;
+        border-radius: 0.45rem;
+        background-color: #38bdf8;
+        color: #0f172a;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+      }
 
-  .add {
-    padding: 0.6rem 1.1rem;
-    border-radius: 0.45rem;
-    background-color: #38bdf8;
-    color: #0f172a;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-  }
+      .add:hover {
+        background-color: #0284c7;
+        color: #fff;
+      }
 
-  .add:hover {
-    background-color: #0284c7;
-    color: #fff;
-  }
+      .content {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 0.75rem;
+      }
 
-  .content {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 0.75rem;
-  }
-
-  @media (max-width: 600px) {
-    .content {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-    }
-  }
-
-  .cam {
-    position: relative;
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
-  }
-
-  .cam:hover {
-    transform: translateY(-2px);
-    border-color: #38bdf8;
-  }
-
-  img {
-    width: 100%;
-    height: 110px;
-    object-fit: cover;
-    display: block;
-    background-color: #090d16;
-    border-radius: 0.45rem 0.45rem 0 0;
-  }
-
-  .title {
-    color: #f8fafc;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .title:hover {
-    color: #38bdf8;
-    text-decoration: underline;
-  }
-
-  .remove,
-  .follow,
-  .unfollow {
-    position: absolute;
-    top: 0.35rem;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: rgba(15, 23, 42, 0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    cursor: pointer;
-    z-index: 2;
-  }
-
-  .remove {
-    left: 0.35rem;
-  }
-
-  .follow,
-  .unfollow {
-    right: 0.35rem;
-  }
-
-  .follow {
-    color: #94a3b8;
-    font-size: 1rem;
-  }
-
-  .unfollow {
-    color: #facc15;
-    font-size: 0.9rem;
-  }
-
-  .hide {
-    display: none;
-  }
-  </style>
-</head>
-
-<body>
-  <div>
-    <input>
-    <div class='add' onclick="clickAdd()">Add</div>
-  </div>
-  <div class='content'></div>
-  <script>
-  let users, followed
-
-  readBin()
-
-  function readBin() {
-    fetch('https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
+      @media (max-width: 600px) {
+        .content {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.5rem;
         }
-      })
-      .then(res => res.json())
-      .then(data => {
-        users = data.record.users
-        followed = data.record.followed
-        render()
-        setInterval(refresh, 500)
-      })
-  }
+      }
 
-  function updateBin() {
-    let toSend = JSON.stringify({ users, followed })
-    fetch('https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': '$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK'
-      },
-      body: JSON.stringify({ users, followed })
-    })
-    fetch(`/chatu?data=${toSend}`)
-  }
+      .cam {
+        position: relative;
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition:
+          transform 0.15s,
+          border-color 0.15s;
+      }
 
-  function render() {
-    let html = ``
-    users.forEach(el => {
-      html +=
-        `<div class="cam ${el}" onclick="clickCam('${el}')">
+      .cam:hover {
+        transform: translateY(-2px);
+        border-color: #38bdf8;
+      }
+
+      img {
+        width: 100%;
+        height: 110px;
+        object-fit: cover;
+        display: block;
+        background-color: #090d16;
+        border-radius: 0.45rem 0.45rem 0 0;
+      }
+
+      .title {
+        color: #f8fafc;
+        padding: 0.45rem 0.6rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .title:hover {
+        color: #38bdf8;
+        text-decoration: underline;
+      }
+
+      .remove,
+      .follow,
+      .unfollow {
+        position: absolute;
+        top: 0.35rem;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: rgba(15, 23, 42, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+        z-index: 2;
+      }
+
+      .remove {
+        left: 0.35rem;
+      }
+
+      .follow,
+      .unfollow {
+        right: 0.35rem;
+      }
+
+      .follow {
+        color: #94a3b8;
+        font-size: 1rem;
+      }
+
+      .unfollow {
+        color: #facc15;
+        font-size: 0.9rem;
+      }
+
+      .hide {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div>
+      <input />
+      <div class="add" onclick="clickAdd()">Add</div>
+    </div>
+    <div class="content"></div>
+    <script>
+      let users, followed
+
+      readBin()
+
+      function readBin() {
+        fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+          }
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            users = data.record.users
+            followed = data.record.followed
+            render()
+            setInterval(refresh, 500)
+          })
+      }
+
+      function updateBin() {
+        let toSend = JSON.stringify({ users, followed })
+        fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+          },
+          body: JSON.stringify({ users, followed })
+        })
+        fetch(`/chatu?data=${toSend}`)
+      }
+
+      function render() {
+        let html = ``
+        users.forEach((el) => {
+          html += `<div class="cam ${el}" onclick="clickCam('${el}')">
         <div class="remove" onclick="clickRemove('${el}')">🗑️</div>
         <div class="follow hide" onclick="clickFollow('${el}')">★</div>
         <div class="unfollow hide" onclick="clickUnfollow('${el}')">⭐</div>
         <img src="https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}" onerror="imgError(this)" onclick="clickImg('${el}')" onload="imgLoad(this)">
         <div class="title" onclick="clickTitle('${el}')">${el}</div>
       </div>`
-    })
-    document.querySelector('.content').innerHTML = html
-    document.querySelector('input').placeholder = `${users.length} users`
-    document.querySelector('input').value = ''
-    document.querySelectorAll('.cam').forEach(el => {
-      if (followed.includes(el.classList[1])) {
-        el.querySelector('.unfollow').classList.remove('hide')
-        el.parentElement.prepend(el)
-      } else {
-        el.querySelector('.follow').classList.remove('hide')
+        })
+        document.querySelector(".content").innerHTML = html
+        document.querySelector("input").placeholder = `${users.length} users`
+        document.querySelector("input").value = ""
+        document.querySelectorAll(".cam").forEach((el) => {
+          if (followed.includes(el.classList[1])) {
+            el.querySelector(".unfollow").classList.remove("hide")
+            el.parentElement.prepend(el)
+          } else {
+            el.querySelector(".follow").classList.remove("hide")
+          }
+        })
+        setTimeout(() => {
+          document.querySelectorAll("img").forEach((el) => {
+            if (el.complete && el.naturalWidth > 0) {
+              el.parentElement.parentElement.prepend(el.parentElement)
+            }
+          })
+        }, 500)
       }
-    })
-    setTimeout(() => {
-      document.querySelectorAll('img').forEach(el => {
-        if (el.complete && el.naturalWidth > 0) {
-          el.parentElement.parentElement.prepend(el.parentElement)
+
+      function refresh() {
+        document.querySelectorAll("img").forEach((el) => {
+          if (el.complete && el.naturalWidth > 0) {
+            el.src = el.src.split("f=")[0] + "f=" + Math.random()
+          }
+        })
+      }
+
+      function imgError(img) {
+        img.style.visibility = "hidden"
+      }
+
+      function imgLoad(img) {
+        // img.parentElement.parentElement.prepend(img.parentElement)
+      }
+
+      function clickCam(user) {
+        window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
+      }
+
+      function clickTitle(user) {
+        event.stopPropagation()
+        window.open("https://www.google.com/search?udm=2&tbs=isz:l&q=" + user + " porn", "_blank", "noopener,noreferrer")
+      }
+
+      function clickRemove(user) {
+        event.stopPropagation()
+        if (window.confirm("Sure to remove?")) {
+          users = users.filter((el) => el !== user)
+          followed = followed.filter((el) => el !== user)
+          updateBin()
+          render()
         }
-      })
-    }, 500)
-  }
-
-  function refresh() {
-    document.querySelectorAll('img').forEach(el => {
-      if (el.complete && el.naturalWidth > 0) {
-        el.src = el.src.split('f=')[0] + 'f=' + Math.random()
       }
-    })
-  }
 
-  function imgError(img) {
-    img.style.visibility = 'hidden'
-  }
-
-  function imgLoad(img) {
-    // img.parentElement.parentElement.prepend(img.parentElement)
-  }
-
-  function clickCam(user) {
-    window.open('https://chaturbate.com/' + user, '_blank', 'noopener,noreferrer')
-  }
-
-  function clickTitle(user) {
-    event.stopPropagation()
-    window.open('https://www.google.com/search?udm=2&tbs=isz:l&q=' + user + ' porn', '_blank', 'noopener,noreferrer')
-  }
-
-  function clickRemove(user) {
-    event.stopPropagation()
-    if (window.confirm('Sure to remove?')) {
-      users = users.filter(el => el !== user)
-      followed = followed.filter(el => el !== user)
-      updateBin()
-      render()
-    }
-  }
-
-  function clickFollow(user) {
-    event.stopPropagation()
-    if (window.confirm('Sure to follow?')) {
-      followed.unshift(user)
-      followed = [...new Set(followed)]
-      updateBin()
-      render()
-    }
-  }
-
-  function clickUnfollow(user) {
-    event.stopPropagation()
-    if (window.confirm('Sure to unfollow?')) {
-      followed = followed.filter(el => el !== user)
-      updateBin()
-      render()
-    }
-  }
-
-  function clickAdd() {
-    input = document.querySelector('input')
-    if (input.value) {
-      if (window.confirm('Sure to add?')) {
-        users.unshift(input.value)
-        users = [...new Set(users)]
-        updateBin()
-        render()
+      function clickFollow(user) {
+        event.stopPropagation()
+        if (window.confirm("Sure to follow?")) {
+          followed.unshift(user)
+          followed = [...new Set(followed)]
+          updateBin()
+          render()
+        }
       }
-    }
-  }
-  </script>
-</body>
 
+      function clickUnfollow(user) {
+        event.stopPropagation()
+        if (window.confirm("Sure to unfollow?")) {
+          followed = followed.filter((el) => el !== user)
+          updateBin()
+          render()
+        }
+      }
+
+      function clickAdd() {
+        input = document.querySelector("input")
+        if (input.value) {
+          if (window.confirm("Sure to add?")) {
+            users.unshift(input.value)
+            users = [...new Set(users)]
+            updateBin()
+            render()
+          }
+        }
+      }
+    </script>
+  </body>
 </html>
