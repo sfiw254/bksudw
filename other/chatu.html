@@ -83,6 +83,24 @@
         border-color: #38bdf8;
       }
 
+      .cam.zoomed {
+        z-index: 50;
+        border-color: #38bdf8;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.85);
+      }
+
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(9, 13, 22, 0.78);
+        z-index: 30;
+        display: none;
+      }
+
+      .backdrop.active {
+        display: block;
+      }
+
       img {
         width: 100%;
         height: 110px;
@@ -155,8 +173,10 @@
       <div class="add" onclick="clickAdd()">Add</div>
     </div>
     <div class="content"></div>
+    <div class="backdrop" onclick="handleBackdropClick(event)"></div>
     <script>
       let users, followed
+      let zoomInterval, refreshInterval
 
       readBin()
 
@@ -173,7 +193,7 @@
             users = data.record.users
             followed = data.record.followed
             render()
-            setInterval(refresh, 500)
+            refreshInterval = setInterval(refresh, 1000)
           })
       }
 
@@ -193,12 +213,12 @@
       function render() {
         let html = ``
         users.forEach((el) => {
-          html += `<div class="cam ${el}" onclick="clickCam('${el}')">
-        <div class="remove" onclick="clickRemove('${el}')">🗑️</div>
-        <div class="follow hide" onclick="clickFollow('${el}')">★</div>
-        <div class="unfollow hide" onclick="clickUnfollow('${el}')">⭐</div>
-        <img src="https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}" onerror="imgError(this)" onclick="clickImg('${el}')" onload="imgLoad(this)">
-        <div class="title" onclick="clickTitle('${el}')">${el}</div>
+          html += `<div class="cam ${el}" onclick="clickCam('${el}', event)">
+        <div class="remove" onclick="clickRemove('${el}', event)">🗑️</div>
+        <div class="follow hide" onclick="clickFollow('${el}', event)">★</div>
+        <div class="unfollow hide" onclick="clickUnfollow('${el}', event)">⭐</div>
+        <img src="https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}" onerror="imgError(this)" onload="imgLoad(this)">
+        <div class="title" onclick="clickTitle('${el}', event)">${el}</div>
       </div>`
         })
         document.querySelector(".content").innerHTML = html
@@ -237,41 +257,113 @@
         // img.parentElement.parentElement.prepend(img.parentElement)
       }
 
-      function clickCam(user) {
-        window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
+      function clickCam(user, e) {
+        e.stopPropagation()
+        const card = e.currentTarget
+
+        if (card.classList.contains("zoomed")) {
+          window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
+          return
+        }
+
+        zoomCard(card)
       }
 
-      function clickTitle(user) {
-        event.stopPropagation()
+      function zoomCard(card) {
+        const rect = card.getBoundingClientRect()
+        const isDesktop = window.innerWidth > 600
+        let scale
+
+        if (isDesktop) {
+          const maxScaleW = (window.innerWidth * 0.6) / rect.width
+          const maxScaleH = (window.innerHeight * 0.85) / rect.height
+          scale = Math.min(maxScaleW, maxScaleH)
+        } else {
+          const maxScaleW = (window.innerWidth - 24) / rect.width
+          scale = Math.min(2, maxScaleW)
+        }
+
+        const cardCenterX = rect.left + rect.width / 2
+        const cardCenterY = rect.top + rect.height / 2
+        const moveX = window.innerWidth / 2 - cardCenterX
+        const moveY = window.innerHeight / 2 - cardCenterY
+
+        card.style.transformOrigin = "center center"
+        card.style.transform = `translate(${moveX}px, ${moveY}px) scale(${scale})`
+        card.style.zIndex = "50"
+        card.classList.add("zoomed")
+
+        document.querySelector(".backdrop").classList.add("active")
+
+        zoomInterval = setInterval(() => {
+          const img = card.querySelector("img")
+          if (img && img.complete && img.naturalWidth > 0) {
+            img.src = img.src.split("f=")[0] + "f=" + Math.random()
+          }
+        }, 150)
+        clearInterval(refreshInterval)
+      }
+
+      function clearZoom() {
+        clearInterval(zoomInterval)
+        clearInterval(refreshInterval)
+        refresh()
+        refreshInterval = setInterval(refresh, 1000)
+        document.querySelector(".backdrop").classList.remove("active")
+
+        document.querySelectorAll(".cam.zoomed").forEach((card) => {
+          card.style.zIndex = "40"
+          card.style.transform = ""
+          card.classList.remove("zoomed")
+          setTimeout(() => {
+            if (!card.classList.contains("zoomed")) {
+              card.style.zIndex = ""
+            }
+          }, 150)
+        })
+      }
+
+      function handleBackdropClick(e) {
+        e.stopPropagation()
+        clearZoom()
+      }
+
+      function clickTitle(user, e) {
+        e.stopPropagation()
         window.open("https://www.google.com/search?udm=2&tbs=isz:l&q=" + user + " porn", "_blank", "noopener,noreferrer")
       }
 
-      function clickRemove(user) {
-        event.stopPropagation()
+      function clickRemove(user, e) {
+        e.stopPropagation()
         if (window.confirm("Sure to remove?")) {
           users = users.filter((el) => el !== user)
           followed = followed.filter((el) => el !== user)
           updateBin()
+          clearZoom()
           render()
         }
       }
 
-      function clickFollow(user) {
-        event.stopPropagation()
+      function clickFollow(user, e) {
+        e.stopPropagation()
         if (window.confirm("Sure to follow?")) {
           followed.unshift(user)
           followed = [...new Set(followed)]
           updateBin()
-          render()
+          const card = document.querySelector(`.cam.${user}`)
+          card.querySelector(".follow").classList.add("hide")
+          card.querySelector(".unfollow").classList.remove("hide")
         }
       }
 
-      function clickUnfollow(user) {
-        event.stopPropagation()
+      function clickUnfollow(user, e) {
+        e.stopPropagation()
         if (window.confirm("Sure to unfollow?")) {
           followed = followed.filter((el) => el !== user)
           updateBin()
-          render()
+          const card = document.querySelector(`.cam.${user}`)
+          card.querySelector(".unfollow").classList.add("hide")
+          card.querySelector(".follow").classList.remove("hide")
         }
       }
 
