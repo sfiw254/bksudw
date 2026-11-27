@@ -5,246 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chatu</title>
     <style>
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        background-color: #0f172a;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-        margin: 0;
-        padding: 1rem;
-      }
-
-      body > div:first-of-type {
-        display: flex;
-        gap: 0.5rem;
-        max-width: 450px;
-        margin: 0 auto 1.25rem auto;
-      }
-
-      input {
-        flex: 1;
-        padding: 0.6rem 0.85rem;
-        border: 1px solid #334155;
-        border-radius: 0.45rem;
-        background-color: #1e293b;
-        color: #f8fafc;
-        font-size: 0.95rem;
-        outline: none;
-      }
-
-      input:focus {
-        border-color: #38bdf8;
-      }
-
-      .add {
-        padding: 0.6rem 1.1rem;
-        border-radius: 0.45rem;
-        background-color: #38bdf8;
-        color: #0f172a;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-      }
-
-      .add:hover {
-        background-color: #0284c7;
-        color: #fff;
-      }
-
-      .content {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap: 0.75rem;
-      }
-
-      @media (max-width: 600px) {
-        .content {
-          grid-template-columns: repeat(2, 1fr);
-          gap: 0.5rem;
-        }
-      }
-
       .cam {
-        position: relative;
-        background-color: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        transition:
-          transform 0.15s,
-          border-color 0.15s;
-      }
-
-      .cam:hover {
-        transform: translateY(-2px);
-        border-color: #38bdf8;
-      }
-
-      .cam.zoomed {
-        z-index: 50;
-        border-color: #38bdf8;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.85);
-      }
-
-      .backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(9, 13, 22, 0.78);
-        z-index: 30;
-        display: none;
-      }
-
-      .backdrop.active {
-        display: block;
+        display: inline-block;
+        border: solid 0.1rem lightgray;
       }
 
       img {
-        width: 100%;
+        width: 195px;
         height: 110px;
-        object-fit: cover;
-        display: block;
-        background-color: #090d16;
-        border-radius: 0.45rem 0.45rem 0 0;
-      }
-
-      .title {
-        color: #f8fafc;
-        padding: 0.45rem 0.6rem;
-        font-size: 0.85rem;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .title:hover {
-        color: #38bdf8;
-        text-decoration: underline;
-      }
-
-      .remove,
-      .follow,
-      .unfollow {
-        position: absolute;
-        top: 0.35rem;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: rgba(15, 23, 42, 0.75);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        cursor: pointer;
-        z-index: 2;
-      }
-
-      .remove {
-        left: 0.35rem;
-      }
-
-      .follow,
-      .unfollow {
-        right: 0.35rem;
-      }
-
-      .follow {
-        color: #94a3b8;
-        font-size: 1rem;
-      }
-
-      .unfollow {
-        color: #facc15;
-        font-size: 0.9rem;
       }
 
       .hide {
         display: none;
       }
+
+      @media (max-width: 768px) {
+        img {
+          width: 135px;
+          height: 76px;
+        }
+      }
     </style>
   </head>
 
   <body>
-    <div>
-      <input />
-      <div class="add" onclick="clickAdd()">Add</div>
-    </div>
+    <input />
+    <button id="add" onclick="clickAdd()">Add</button>
     <div class="content"></div>
-    <div class="backdrop" onclick="handleBackdropClick(event)"></div>
     <script>
       let users, followed
-      let zoomInterval, refreshInterval
+      let refreshTimeout, refreshInterval
 
-      readBin()
+      init()
 
-      function readBin() {
-        fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
+      async function init() {
+        const res = await fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
             "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
           }
         })
-          .then((res) => res.json())
-          .then((data) => {
-            users = data.record.users
-            followed = data.record.followed
-            render()
-            refreshInterval = setInterval(refresh, 1000)
-          })
+        const data = await res.json()
+        users = data.record
+        renderUsers()
+        const res2 = await fetch("/chatu?l=123")
+        const data2 = await res2.json()
+        followed = data2
+        renderFollowed()
       }
 
-      function updateBin() {
-        let toSend = JSON.stringify({ users, followed })
-        fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
-          },
-          body: JSON.stringify({ users, followed })
-        })
-        fetch(`/chatu?data=${toSend}`)
-      }
-
-      function render() {
+      function renderUsers() {
         let html = ``
         users.forEach((el) => {
-          html += `<div class="cam ${el}" onclick="clickCam('${el}', event)">
-        <div class="remove" onclick="clickRemove('${el}', event)">🗑️</div>
-        <div class="follow hide" onclick="clickFollow('${el}', event)">★</div>
-        <div class="unfollow hide" onclick="clickUnfollow('${el}', event)">⭐</div>
-        <img src="https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}" onerror="imgError(this)" onload="imgLoad(this)">
-        <div class="title" onclick="clickTitle('${el}', event)">${el}</div>
+          html += `<div class="cam" id="${el}">
+        <img class="${el}" src="https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}" onload="imgLoad(this)" onerror="imgError(this)" onclick="imgClick('${el}')" onmouseover="imgOver('${el}')" onmouseout = "imgOut('${el}')"><br>
+        <button id="remove" onclick="removeClick('${el}')">🗑️</button>
+        <button id="title" onclick="titleClick('${el}')">${el}</button>
+        <button id="follow" class="" onclick="followClick('${el}')">★</button>
+        <button id="unfollow" class="hide" onclick="unfollowClick('${el}')">⭐</button>
       </div>`
         })
         document.querySelector(".content").innerHTML = html
-        document.querySelector("input").placeholder = `${users.length} users`
-        document.querySelector("input").value = ""
-        document.querySelectorAll(".cam").forEach((el) => {
-          if (followed.includes(el.classList[1])) {
-            el.querySelector(".unfollow").classList.remove("hide")
-            el.parentElement.prepend(el)
-          } else {
-            el.querySelector(".follow").classList.remove("hide")
-          }
-        })
-        setTimeout(() => {
-          document.querySelectorAll("img").forEach((el) => {
-            if (el.complete && el.naturalWidth > 0) {
-              el.parentElement.parentElement.prepend(el.parentElement)
-            }
-          })
-        }, 500)
+        document.querySelector("input").placeholder = `${users.length} cams`
       }
 
-      function refresh() {
-        document.querySelectorAll("img").forEach((el) => {
-          if (el.complete && el.naturalWidth > 0) {
-            el.src = el.src.split("f=")[0] + "f=" + Math.random()
+      function renderFollowed() {
+        document.querySelectorAll(".cam").forEach((el) => {
+          if (followed.includes(el.id)) {
+            el.querySelector("#unfollow").classList.remove("hide")
+            el.querySelector("#follow").classList.add("hide")
+          } else {
+            el.querySelector("#follow").classList.remove("hide")
+            el.querySelector("#unfollow").classList.add("hide")
           }
         })
       }
@@ -254,116 +87,54 @@
       }
 
       function imgLoad(img) {
-        // img.parentElement.parentElement.prepend(img.parentElement)
+        img.parentElement.parentElement.prepend(img.parentElement)
+        img.onload = null
       }
 
-      function clickCam(user, e) {
-        e.stopPropagation()
-        const card = e.currentTarget
-
-        if (card.classList.contains("zoomed")) {
-          window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
-          return
-        }
-
-        zoomCard(card)
+      function imgClick(user) {
+        window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
       }
 
-      function zoomCard(card) {
-        const rect = card.getBoundingClientRect()
-        const isDesktop = window.innerWidth > 600
-        let scale
-
-        if (isDesktop) {
-          const maxScaleW = (window.innerWidth * 0.6) / rect.width
-          const maxScaleH = (window.innerHeight * 0.85) / rect.height
-          scale = Math.min(maxScaleW, maxScaleH)
-        } else {
-          const maxScaleW = (window.innerWidth - 24) / rect.width
-          scale = Math.min(2, maxScaleW)
-        }
-
-        const cardCenterX = rect.left + rect.width / 2
-        const cardCenterY = rect.top + rect.height / 2
-        const moveX = window.innerWidth / 2 - cardCenterX
-        const moveY = window.innerHeight / 2 - cardCenterY
-
-        card.style.transformOrigin = "center center"
-        card.style.transform = `translate(${moveX}px, ${moveY}px) scale(${scale})`
-        card.style.zIndex = "50"
-        card.classList.add("zoomed")
-
-        document.querySelector(".backdrop").classList.add("active")
-
-        zoomInterval = setInterval(() => {
-          const img = card.querySelector("img")
-          if (img && img.complete && img.naturalWidth > 0) {
+      function imgOver(user) {
+        clearTimeout(refreshTimeout)
+        refreshTimeout = setTimeout(() => {
+          const img = document.querySelector(`img.${user}`)
+          if (img.complete && img.naturalWidth > 0) {
             img.src = img.src.split("f=")[0] + "f=" + Math.random()
+            clearInterval(refreshInterval)
+            refreshInterval = setInterval(() => {
+              const img = document.querySelector(`img.${user}`)
+              img.src = img.src.split("f=")[0] + "f=" + Math.random()
+            }, 200)
           }
-        }, 150)
+        }, 300)
+      }
+
+      function imgOut(user) {
+        clearTimeout(refreshTimeout)
         clearInterval(refreshInterval)
       }
 
-      function clearZoom() {
-        clearInterval(zoomInterval)
-        clearInterval(refreshInterval)
-        refresh()
-        refreshInterval = setInterval(refresh, 1000)
-        document.querySelector(".backdrop").classList.remove("active")
-
-        document.querySelectorAll(".cam.zoomed").forEach((card) => {
-          card.style.zIndex = "40"
-          card.style.transform = ""
-          card.classList.remove("zoomed")
-          setTimeout(() => {
-            if (!card.classList.contains("zoomed")) {
-              card.style.zIndex = ""
-            }
-          }, 150)
-        })
-      }
-
-      function handleBackdropClick(e) {
-        e.stopPropagation()
-        clearZoom()
-      }
-
-      function clickTitle(user, e) {
-        e.stopPropagation()
+      function titleClick(user) {
         window.open("https://www.google.com/search?udm=2&tbs=isz:l&q=" + user + " porn", "_blank", "noopener,noreferrer")
       }
 
-      function clickRemove(user, e) {
-        e.stopPropagation()
+      function removeClick(user) {
         if (window.confirm("Sure to remove?")) {
           users = users.filter((el) => el !== user)
-          followed = followed.filter((el) => el !== user)
           updateBin()
-          clearZoom()
-          render()
         }
       }
 
-      function clickFollow(user, e) {
-        e.stopPropagation()
+      function followClick(user) {
         if (window.confirm("Sure to follow?")) {
-          followed.unshift(user)
-          followed = [...new Set(followed)]
-          updateBin()
-          const card = document.querySelector(`.cam.${user}`)
-          card.querySelector(".follow").classList.add("hide")
-          card.querySelector(".unfollow").classList.remove("hide")
+          fetch(`/chatu?f=${user}`).then((res) => window.location.reload())
         }
       }
 
-      function clickUnfollow(user, e) {
-        e.stopPropagation()
+      function unfollowClick(user) {
         if (window.confirm("Sure to unfollow?")) {
-          followed = followed.filter((el) => el !== user)
-          updateBin()
-          const card = document.querySelector(`.cam.${user}`)
-          card.querySelector(".unfollow").classList.add("hide")
-          card.querySelector(".follow").classList.remove("hide")
+          fetch(`/chatu?u=${user}`).then((res) => window.location.reload())
         }
       }
 
@@ -374,9 +145,19 @@
             users.unshift(input.value)
             users = [...new Set(users)]
             updateBin()
-            render()
           }
         }
+      }
+
+      function updateBin() {
+        fetch("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+          },
+          body: JSON.stringify(users)
+        }).then((res) => window.location.reload())
       }
     </script>
   </body>

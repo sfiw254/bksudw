@@ -504,45 +504,63 @@ setInterval(function () {
 ///////////////////////////////////////////////////////chatu
 app.use(express.static("other"))
 
-let users, followed
+let followed = []
+
 app.get("/chatu", (req, res) => routeChatu(req, res))
 
 readFollowed()
+checkFollowed()
+setInterval(checkFollowed, 1000 * 5)
 
 function routeChatu(req, res) {
   try {
-    if (req.query.data) {
-      const parsed = JSON.parse(req.query.data)
-      if (!Array.isArray(parsed.followed) || !Array.isArray(parsed.users) || !parsed.users.length || !parsed.followed.length) {
-        throw new Error("invalid data")
-      }
-      users = parsed.users
-      followed = parsed.followed
+    if (req.query.f) {
+      followed.unshift(req.query.f)
+      followed = [...new Set(followed)]
+      updateFollowed()
+    } else if (req.query.u) {
+      followed = followed.filter((el) => el !== req.query.u)
+      updateFollowed()
+    } else if (req.query.l) {
       res.send(followed)
-    } else {
-      res.send("u lost?")
+      return
     }
+    res.send("ok")
   } catch (err) {
     console.log("ERR routeChatu", err.message)
     res.status(400).send("invalid data")
   }
 }
 
+async function readFollowed() {
+  return axios("https://api.jsonbin.io/v3/b/6a96b3d2f5f4af5e295c14db", {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
+    }
+  })
+    .then((res) => {
+      followed = res.data.record
+    })
+    .catch((err) => console.log("ERR readFollowed", err.message))
+}
+
 function checkFollowed() {
+  followed = followed.filter((el) => el !== "dummy")
   followed.forEach((el) => {
     axios(`https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}`, {
       signal: AbortSignal.timeout(4000)
     })
       .then((res) => {
         console.log(el, res.status)
-        if (res.status == 200) {
+        if (res.status == 200 && followed.includes(el)) {
+          // console.log("mock notify", el)
           sendMaileroo(
             "sfiw@proton.me",
             `${el} is online`,
             `${el} is online:
-https://chaturbate.com/${el}`
+          https://chaturbate.com/${el}`
           )
-          // console.log('mock notify', el)
           followed = followed.filter((elt) => elt !== el)
           updateFollowed()
         }
@@ -551,37 +569,17 @@ https://chaturbate.com/${el}`
   })
 }
 
-function readFollowed() {
-  axios("https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9", {
-    headers: {
-      "Content-Type": "application/json",
-      "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
-    }
-  })
-    .then((res) => {
-      followed = res.data.record.followed
-      users = res.data.record.users
-      checkFollowed()
-      setInterval(checkFollowed, 1000 * 60)
-    })
-    .catch((err) => console.log("ERR readFollowed", err.message))
-}
-
 function updateFollowed() {
+  if (!followed.length) {
+    followed.push("dummy")
+  }
   axios
-    .put(
-      "https://api.jsonbin.io/v3/b/6a96b3e9da38895dfe2a8bc9",
-      {
-        users,
-        followed
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
-        }
+    .put("https://api.jsonbin.io/v3/b/6a96b3d2f5f4af5e295c14db", followed, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": "$2a$10$HKvQ2eV1Hypp05KcTnfD4Ot/VvlNBykosM8cShL/K8Evz0nFL/PnK"
       }
-    )
+    })
     .then((res) => res)
-    .catch((err) => console.log("ERR readFollowed", err.message))
+    .catch((err) => console.log("ERR updateFollowed", err.message))
 }
