@@ -548,6 +548,11 @@ async function readFollowed() {
 }
 
 function checkFollowed() {
+  const day = new Date().getDay()
+  const hour = new Date().getHours()
+  if (!day || hour < 8 || hour > 23) {
+    return false
+  }
   followed = followed.filter((el) => el !== "dummy")
   followed.forEach((el) => {
     axios(`https://jpeg.live.mmcdn.com/stream?room=${el}&f=${Math.random()}`, {
