@@ -10,20 +10,28 @@
         border: solid 0.1rem lightgray;
       }
 
+      .cam.zoomed {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        background: #fff;
+        border: none;
+      }
+
       img {
         width: 195px;
         height: 110px;
       }
 
-      .hide {
-        display: none;
+      .cam.zoomed img {
+        width: min(90vw, 160vh);
+        height: auto;
       }
 
-      @media (max-width: 768px) {
-        img {
-          width: 135px;
-          height: 76px;
-        }
+      .cam.zoomed button {
+        zoom: 1.5;
       }
 
       #backdrop {
@@ -38,37 +46,14 @@
         display: block;
       }
 
-      .cam.zoomed {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-        background: #fff;
-      }
-
-      .cam.zoomed img {
-        width: 80vw;
-        height: auto;
-        max-height: 85vh;
-        object-fit: contain;
+      .hide {
+        display: none;
       }
 
       @media (max-width: 768px) {
-        .cam.zoomed img {
-          width: 96vw;
-        }
-      }
-
-      .cam.zoomed img {
-        width: auto;
-        height: auto;
-        max-width: 80vw;
-        max-height: 85vh;
-      }
-      @media (max-width: 768px) {
-        .cam.zoomed img {
-          max-width: 96vw;
+        img {
+          width: 135px;
+          height: 76px;
         }
       }
     </style>
@@ -145,6 +130,7 @@
           window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
         } else {
           cam.classList.add("zoomed")
+          cam.classList.add("zoomed2")
         }
       }
 
