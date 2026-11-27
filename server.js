@@ -518,9 +518,11 @@ function routeChatu(req, res) {
       followed.unshift(req.query.f)
       followed = [...new Set(followed)]
       updateFollowed()
+      console.log("+1 followed", req.query.f)
     } else if (req.query.u) {
       followed = followed.filter((el) => el !== req.query.u)
       updateFollowed()
+      console.log("-1 followed", req.query.u)
     } else if (req.query.l) {
       res.send(followed)
       return
