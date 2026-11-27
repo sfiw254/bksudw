@@ -1,0 +1,1324 @@
+<!doctype html>
+<html lang="mk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SNOW BROS: ARCADE EDITION</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+      }
+      body {
+        background: radial-gradient(circle at center, #141e30 0%, #070b14 100%);
+        color: #fff;
+        font-family: "Courier New", Courier, monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      #arcade-cabinet {
+        position: relative;
+        padding: 16px;
+        background: linear-gradient(145deg, #22293a, #121722);
+        border-radius: 18px;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.85),
+          inset 0 2px 3px rgba(255, 255, 255, 0.15);
+        border: 3px solid #35435e;
+      }
+      #screen-bezel {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 4px solid #090d16;
+        box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9);
+      }
+      canvas {
+        display: block;
+        background: #0d1629;
+        image-rendering: pixelated;
+      }
+      #scanlines {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
+        background-size: 100% 4px;
+        pointer-events: none;
+      }
+      #controls-bar {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: #9fb3d9;
+        padding: 0 6px;
+      }
+      .key-badge {
+        background: #2b364d;
+        border: 1px solid #4d5f82;
+        border-bottom-width: 3px;
+        border-radius: 4px;
+        padding: 2px 6px;
+        color: #fff;
+        font-weight: bold;
+        font-size: 12px;
+      }
+      #mute-btn {
+        background: #2b364d;
+        border: 1px solid #4d5f82;
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: bold;
+      }
+      #mute-btn:hover {
+        background: #3b4a69;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="arcade-cabinet">
+      <div id="screen-bezel">
+        <canvas id="gameCanvas" width="768" height="624"></canvas>
+        <div id="scanlines"></div>
+      </div>
+      <div id="controls-bar">
+        <div><span class="key-badge">⬅️</span> <span class="key-badge">➡️</span> Движење</div>
+        <div><span class="key-badge">⬆️</span> / <span class="key-badge">Z</span> Скок</div>
+        <div><span class="key-badge">SPACE</span> / <span class="key-badge">X</span> Снег / Шутни топка</div>
+        <div><span class="key-badge">R</span> Рестарт</div>
+        <button id="mute-btn">🔊 Звук: ВКЛ</button>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById("gameCanvas")
+        const ctx = canvas.getContext("2d")
+        const W = canvas.width // 768 (16 tiles * 48)
+        const H = canvas.height // 624 (13 tiles * 48)
+        const TILE = 48
+
+        // ==========================================
+        // 1. WEB AUDIO SYNTHESIZER (ARCADE SFX)
+        // ==========================================
+        const AudioSys = {
+          ctx: null,
+          muted: false,
+          init() {
+            if (!this.ctx) {
+              this.ctx = new (window.AudioContext || window.webkitAudioContext)()
+            }
+            if (this.ctx.state === "suspended") {
+              this.ctx.resume()
+            }
+          },
+          playTone(freq, endFreq, duration, type = "square", vol = 0.12) {
+            if (this.muted) return
+            this.init()
+            const now = this.ctx.currentTime
+            const osc = this.ctx.createOscillator()
+            const gain = this.ctx.createGain()
+            osc.type = type
+            osc.frequency.setValueAtTime(freq, now)
+            if (endFreq) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration)
+            }
+            gain.gain.setValueAtTime(vol, now)
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration)
+            osc.connect(gain)
+            gain.connect(this.ctx.destination)
+            osc.start(now)
+            osc.stop(now + duration)
+          },
+          shoot() {
+            this.playTone(580, 220, 0.09, "triangle", 0.14)
+          },
+          jump() {
+            this.playTone(210, 520, 0.15, "square", 0.1)
+          },
+          freezeHit() {
+            this.playTone(750, 980, 0.06, "sine", 0.12)
+          },
+          kickBall() {
+            this.playTone(160, 480, 0.18, "sawtooth", 0.16)
+          },
+          bounceWall() {
+            this.playTone(220, 140, 0.08, "square", 0.14)
+          },
+          enemyPop() {
+            this.playTone(440, 880, 0.12, "square", 0.14)
+            setTimeout(() => this.playTone(660, 1180, 0.16, "square", 0.14), 60)
+          },
+          pickup() {
+            this.playTone(523.25, 783.99, 0.1, "sine", 0.15)
+            setTimeout(() => this.playTone(783.99, 1046.5, 0.16, "sine", 0.15), 75)
+          },
+          hurt() {
+            this.playTone(300, 75, 0.35, "sawtooth", 0.18)
+          },
+          stageClear() {
+            const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5]
+            notes.forEach((n, idx) => {
+              setTimeout(() => this.playTone(n, n * 1.02, 0.14, "square", 0.13), idx * 110)
+            })
+          }
+        }
+
+        document.getElementById("mute-btn").addEventListener("click", (e) => {
+          AudioSys.muted = !AudioSys.muted
+          e.target.textContent = AudioSys.muted ? "🔇 Звук: ИСКЛ" : "🔊 Звук: ВКЛ"
+          e.target.blur()
+        })
+
+        // ==========================================
+        // 2. INPUT HANDLING
+        // ==========================================
+        const keys = {}
+        const justPressed = {}
+        window.addEventListener("keydown", (e) => {
+          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
+            e.preventDefault()
+          }
+          if (!keys[e.code]) {
+            justPressed[e.code] = true
+          }
+          keys[e.code] = true
+          AudioSys.init()
+        })
+        window.addEventListener("keyup", (e) => {
+          keys[e.code] = false
+        })
+
+        // ==========================================
+        // 3. LEVEL DESIGN (16x13 GRID - CLASSIC SNOW BROS LAYOUT)
+        // '#' = Solid Wall/Floor, '=' = One-way Jump-Through Platform
+        // ==========================================
+        const LEVEL_MAP = [
+          "################",
+          "#..............#",
+          "#....======....#",
+          "#..............#",
+          "#..====..====..#",
+          "#..............#",
+          "#====......====#",
+          "#..............#",
+          "#..==========..#",
+          "#..............#",
+          "#====......====#",
+          "#..............#",
+          "################"
+        ]
+
+        // Background ambient snowflakes
+        const bgSnow = Array.from({ length: 45 }, () => ({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          r: 1 + Math.random() * 2.5,
+          speedY: 18 + Math.random() * 35,
+          drift: Math.random() * Math.PI * 2
+        }))
+
+        // ==========================================
+        // 4. GAME STATE & ENTITIES
+        // ==========================================
+        let state = "TITLE" // TITLE, PLAYING, STAGE_CLEAR, GAME_OVER
+        let score = 0
+        let highScore = 10000
+        let stageTimer = 60.0 // 1 minute challenge!
+        let screenShake = 0
+        let hitStop = 0
+        let clearDelay = 0
+
+        let player = null
+        let projectiles = []
+        let enemies = []
+        let snowballs = []
+        let items = []
+        let particles = []
+        let floatingTexts = []
+
+        const GRAVITY = 1550
+        const MAX_FALL = 720
+
+        function createPlayer() {
+          return {
+            x: W / 2 - 18,
+            y: H - TILE - 44,
+            w: 36,
+            h: 44,
+            vx: 0,
+            vy: 0,
+            facing: 1,
+            grounded: false,
+            shootCooldown: 0,
+            invuln: 2.0,
+            lives: 3,
+            speedBonus: 0,
+            powerBonus: 0,
+            rangeBonus: 0,
+            animTimer: 0,
+            kickAnim: 0
+          }
+        }
+
+        function spawnEnemies() {
+          enemies = [
+            // Top platform patrol (Red Demon)
+            { type: "demon", x: 250, y: 2 * TILE - 42, w: 38, h: 42, vx: 95, vy: 0, facing: 1, snowLevel: 0, thawTimer: 0, jumpTimer: 2.2, anim: 0 },
+            {
+              type: "demon",
+              x: 480,
+              y: 2 * TILE - 42,
+              w: 38,
+              h: 42,
+              vx: -95,
+              vy: 0,
+              facing: -1,
+              snowLevel: 0,
+              thawTimer: 0,
+              jumpTimer: 3.1,
+              anim: 1
+            },
+            // Upper-mid platforms (Frog / Jumper)
+            {
+              type: "jumper",
+              x: 160,
+              y: 4 * TILE - 42,
+              w: 38,
+              h: 42,
+              vx: 110,
+              vy: 0,
+              facing: 1,
+              snowLevel: 0,
+              thawTimer: 0,
+              jumpTimer: 1.4,
+              anim: 0
+            },
+            {
+              type: "jumper",
+              x: 560,
+              y: 4 * TILE - 42,
+              w: 38,
+              h: 42,
+              vx: -110,
+              vy: 0,
+              facing: -1,
+              snowLevel: 0,
+              thawTimer: 0,
+              jumpTimer: 1.8,
+              anim: 2
+            },
+            // Center wide platform
+            { type: "demon", x: 220, y: 8 * TILE - 42, w: 38, h: 42, vx: 120, vy: 0, facing: 1, snowLevel: 0, thawTimer: 0, jumpTimer: 2.5, anim: 0 },
+            {
+              type: "fire",
+              x: 500,
+              y: 8 * TILE - 42,
+              w: 38,
+              h: 42,
+              vx: -105,
+              vy: 0,
+              facing: -1,
+              snowLevel: 0,
+              thawTimer: 0,
+              jumpTimer: 2.0,
+              anim: 1
+            },
+            // Lower side platforms
+            { type: "jumper", x: 85, y: 10 * TILE - 42, w: 38, h: 42, vx: 90, vy: 0, facing: 1, snowLevel: 0, thawTimer: 0, jumpTimer: 1.6, anim: 0 },
+            { type: "fire", x: 640, y: 10 * TILE - 42, w: 38, h: 42, vx: -90, vy: 0, facing: -1, snowLevel: 0, thawTimer: 0, jumpTimer: 2.4, anim: 1 }
+          ]
+        }
+
+        function startGame() {
+          score = 0
+          stageTimer = 60.0
+          player = createPlayer()
+          projectiles = []
+          snowballs = []
+          items = []
+          particles = []
+          floatingTexts = []
+          spawnEnemies()
+          state = "PLAYING"
+        }
+
+        // ==========================================
+        // 5. COLLISION & PHYSICS HELPERS
+        // ==========================================
+        function isSolidAt(col, row) {
+          if (row < 0 || row >= 13 || col < 0 || col >= 16) return true
+          return LEVEL_MAP[row][col] === "#"
+        }
+
+        function isPlatformAt(col, row) {
+          if (row < 0 || row >= 13 || col < 0 || col >= 16) return false
+          return LEVEL_MAP[row][col] === "="
+        }
+
+        function moveEntity(ent, dt, ignoreOneWay = false) {
+          // Horizontal movement
+          ent.x += ent.vx * dt
+          const leftCol = Math.floor(ent.x / TILE)
+          const rightCol = Math.floor((ent.x + ent.w - 0.01) / TILE)
+          const topRow = Math.floor(ent.y / TILE)
+          const botRow = Math.floor((ent.y + ent.h - 0.01) / TILE)
+
+          let hitWall = false
+          if (ent.vx < 0) {
+            for (let r = topRow; r <= botRow; r++) {
+              if (isSolidAt(leftCol, r)) {
+                ent.x = (leftCol + 1) * TILE
+                hitWall = true
+                break
+              }
+            }
+          } else if (ent.vx > 0) {
+            for (let r = topRow; r <= botRow; r++) {
+              if (isSolidAt(rightCol, r)) {
+                ent.x = rightCol * TILE - ent.w
+                hitWall = true
+                break
+              }
+            }
+          }
+
+          // Vertical movement
+          const prevBottom = ent.y + ent.h
+          ent.vy = Math.min(MAX_FALL, ent.vy + GRAVITY * dt)
+          ent.y += ent.vy * dt
+          ent.grounded = false
+
+          const newLeftCol = Math.floor((ent.x + 3) / TILE)
+          const newRightCol = Math.floor((ent.x + ent.w - 3.01) / TILE)
+          const newTopRow = Math.floor(ent.y / TILE)
+          const newBotRow = Math.floor((ent.y + ent.h - 0.01) / TILE)
+
+          if (ent.vy < 0) {
+            // Head bump on solid ceiling
+            for (let c = newLeftCol; c <= newRightCol; c++) {
+              if (isSolidAt(c, newTopRow)) {
+                ent.y = (newTopRow + 1) * TILE
+                ent.vy = 0
+                break
+              }
+            }
+          } else if (ent.vy >= 0) {
+            // Landing on solid floor or one-way platform
+            for (let c = newLeftCol; c <= newRightCol; c++) {
+              if (isSolidAt(c, newBotRow)) {
+                ent.y = newBotRow * TILE - ent.h
+                ent.vy = 0
+                ent.grounded = true
+                break
+              }
+              if (!ignoreOneWay && isPlatformAt(c, newBotRow)) {
+                const platTop = newBotRow * TILE
+                if (prevBottom <= platTop + 8) {
+                  ent.y = platTop - ent.h
+                  ent.vy = 0
+                  ent.grounded = true
+                  break
+                }
+              }
+            }
+          }
+          return hitWall
+        }
+
+        function rectsOverlap(a, b) {
+          return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+        }
+
+        function spawnParticles(x, y, color, count = 12, speed = 220) {
+          for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2
+            const spd = 40 + Math.random() * speed
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd - 60,
+              r: 2.5 + Math.random() * 3.5,
+              color,
+              life: 0.35 + Math.random() * 0.35,
+              maxLife: 0.7
+            })
+          }
+        }
+
+        function addFloatingText(x, y, text, color = "#ffe066") {
+          floatingTexts.push({ x, y, text, color, life: 1.0 })
+        }
+
+        function spawnItem(x, y) {
+          const roll = Math.random()
+          let kind = "cake" // Points
+          if (roll < 0.22)
+            kind = "red_potion" // Speed up
+          else if (roll < 0.42)
+            kind = "blue_potion" // Snow power up
+          else if (roll < 0.6) kind = "yellow_potion" // Range up
+          items.push({
+            x: x + 6,
+            y: y + 6,
+            w: 28,
+            h: 28,
+            vx: (Math.random() - 0.5) * 140,
+            vy: -280,
+            kind,
+            life: 10.0
+          })
+        }
+
+        // ==========================================
+        // 6. UPDATE LOOP
+        // ==========================================
+        function update(dt) {
+          // Update background snow always
+          for (const s of bgSnow) {
+            s.y += s.speedY * dt
+            s.drift += dt * 1.8
+            s.x += Math.sin(s.drift) * 14 * dt
+            if (s.y > H) {
+              s.y = -5
+              s.x = Math.random() * W
+            }
+          }
+
+          if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 28)
+          if (hitStop > 0) {
+            hitStop -= dt
+            return
+          }
+
+          if (state === "TITLE") {
+            if (justPressed["Space"] || justPressed["Enter"] || justPressed["KeyZ"] || justPressed["KeyX"]) {
+              startGame()
+            }
+            return
+          }
+
+          if (state === "GAME_OVER" || state === "STAGE_CLEAR") {
+            if (justPressed["KeyR"] || justPressed["Space"] || justPressed["Enter"]) {
+              startGame()
+            }
+            updateParticles(dt)
+            return
+          }
+
+          // Timer countdown (1 minute limit)
+          stageTimer -= dt
+          if (stageTimer <= 0) {
+            stageTimer = 0
+            state = "GAME_OVER"
+            AudioSys.hurt()
+            return
+          }
+
+          if (justPressed["KeyR"]) {
+            startGame()
+            return
+          }
+
+          // --- PLAYER UPDATE ---
+          if (player.invuln > 0) player.invuln -= dt
+          if (player.shootCooldown > 0) player.shootCooldown -= dt
+          if (player.kickAnim > 0) player.kickAnim -= dt
+
+          const moveSpeed = 235 + player.speedBonus * 45
+          let moveDir = 0
+          if (keys["ArrowLeft"] || keys["KeyA"]) moveDir -= 1
+          if (keys["ArrowRight"] || keys["KeyD"]) moveDir += 1
+
+          if (moveDir !== 0) {
+            player.vx = moveDir * moveSpeed
+            player.facing = moveDir
+            player.animTimer += dt * 10
+          } else {
+            player.vx *= 0.72
+            if (Math.abs(player.vx) < 8) player.vx = 0
+            player.animTimer = 0
+          }
+
+          // Jump
+          if ((justPressed["ArrowUp"] || justPressed["KeyW"] || justPressed["KeyZ"]) && player.grounded) {
+            player.vy = -660
+            player.grounded = false
+            AudioSys.jump()
+            spawnParticles(player.x + player.w / 2, player.y + player.h, "#ffffff", 6, 90)
+          }
+
+          moveEntity(player, dt)
+
+          // Shoot Snow OR Kick Adjacent Snowball
+          if (justPressed["Space"] || justPressed["KeyX"]) {
+            let kicked = false
+            // Check if touching a complete snowball (snowLevel >= 4)
+            for (let i = enemies.length - 1; i >= 0; i--) {
+              const en = enemies[i]
+              if (en.snowLevel >= 4) {
+                const touchBox = {
+                  x: player.x - 14,
+                  y: player.y - 6,
+                  w: player.w + 28,
+                  h: player.h + 12
+                }
+                if (rectsOverlap(touchBox, en)) {
+                  // Launch rolling snowball!
+                  snowballs.push({
+                    x: en.x,
+                    y: en.y,
+                    w: 42,
+                    h: 42,
+                    vx: player.facing * 540,
+                    vy: 0,
+                    bounces: 0,
+                    maxBounces: 5,
+                    combo: 0,
+                    spin: 0
+                  })
+                  enemies.splice(i, 1)
+                  player.kickAnim = 0.22
+                  AudioSys.kickBall()
+                  screenShake = 5
+                  spawnParticles(en.x + 20, en.y + 20, "#a8e6ff", 14, 180)
+                  kicked = true
+                  break
+                }
+              }
+            }
+
+            if (!kicked && player.shootCooldown <= 0) {
+              player.shootCooldown = 0.17
+              const shotSpeed = 520 + player.rangeBonus * 90
+              const shotLife = 0.34 + player.rangeBonus * 0.08
+              projectiles.push({
+                x: player.facing === 1 ? player.x + player.w - 4 : player.x - 16,
+                y: player.y + 12,
+                w: 22,
+                h: 20,
+                vx: player.facing * shotSpeed,
+                vy: -45,
+                life: shotLife,
+                power: 1 + player.powerBonus
+              })
+              AudioSys.shoot()
+            }
+          }
+
+          // --- PROJECTILES UPDATE ---
+          for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i]
+            p.life -= dt
+            p.vy += 320 * dt // Slight arc like original Snow Bros
+            p.x += p.vx * dt
+            p.y += p.vy * dt
+
+            const col = Math.floor((p.x + p.w / 2) / TILE)
+            const row = Math.floor((p.y + p.h / 2) / TILE)
+            if (isSolidAt(col, row) || p.life <= 0) {
+              spawnParticles(p.x + p.w / 2, p.y + p.h / 2, "#e0f7ff", 5, 90)
+              projectiles.splice(i, 1)
+              continue
+            }
+
+            // Hit enemy
+            for (const en of enemies) {
+              if (rectsOverlap(p, en)) {
+                en.snowLevel = Math.min(4, en.snowLevel + p.power)
+                en.thawTimer = 4.2 // Time before snow starts melting
+                en.vx = p.vx > 0 ? 35 : -35 // Slight knockback
+                AudioSys.freezeHit()
+                spawnParticles(p.x + p.w / 2, p.y + p.h / 2, "#ffffff", 8, 120)
+                projectiles.splice(i, 1)
+                break
+              }
+            }
+          }
+
+          // --- ENEMIES UPDATE ---
+          for (let i = enemies.length - 1; i >= 0; i--) {
+            const en = enemies[i]
+            en.anim += dt * 7
+
+            if (en.snowLevel > 0) {
+              // Encased in snow (partially or fully)
+              en.vx *= 0.85
+              moveEntity(en, dt)
+              en.thawTimer -= dt
+              if (en.thawTimer <= 0) {
+                en.snowLevel--
+                en.thawTimer = 2.2
+                if (en.snowLevel === 0) {
+                  en.vx = en.facing * 105
+                }
+              }
+              // Player pushing a full snowball gently shifts it
+              if (en.snowLevel >= 4 && rectsOverlap(player, en)) {
+                en.x += player.vx * dt * 0.45
+                // Keep inside walls
+                if (en.x < TILE) en.x = TILE
+                if (en.x + en.w > W - TILE) en.x = W - TILE - en.w
+              }
+            } else {
+              // Active enemy AI
+              const baseSpeed = en.type === "jumper" ? 115 : en.type === "fire" ? 125 : 100
+              en.vx = en.facing * baseSpeed
+
+              // Edge detection so they patrol platforms smartly, occasionally dropping down
+              const lookAheadX = en.facing === 1 ? en.x + en.w + 6 : en.x - 6
+              const footCol = Math.floor(lookAheadX / TILE)
+              const footRow = Math.floor((en.y + en.h + 6) / TILE)
+              if (en.grounded && !isSolidAt(footCol, footRow) && !isPlatformAt(footCol, footRow)) {
+                if (Math.random() < 0.78) {
+                  en.facing *= -1
+                  en.vx = en.facing * baseSpeed
+                }
+              }
+
+              // Periodic jump up towards player level
+              en.jumpTimer -= dt
+              if (en.jumpTimer <= 0 && en.grounded) {
+                en.jumpTimer = en.type === "jumper" ? 1.2 + Math.random() * 1.0 : 2.2 + Math.random() * 1.8
+                if (player.y < en.y - 20 || en.type === "jumper") {
+                  en.vy = -630
+                  en.grounded = false
+                }
+              }
+
+              const hitWall = moveEntity(en, dt)
+              if (hitWall) {
+                en.facing *= -1
+                en.vx = en.facing * baseSpeed
+              }
+
+              // Check collision with player
+              if (player.invuln <= 0 && rectsOverlap(player, en)) {
+                damagePlayer()
+              }
+            }
+          }
+
+          // --- ROLLING SNOWBALLS UPDATE ---
+          for (let i = snowballs.length - 1; i >= 0; i--) {
+            const sb = snowballs[i]
+            sb.spin += (sb.vx / 40) * dt
+            const hitWall = moveEntity(sb, dt, true) // Roll straight off platforms!
+
+            if (hitWall) {
+              sb.vx *= -1
+              sb.bounces++
+              AudioSys.bounceWall()
+              screenShake = 4
+              spawnParticles(sb.x + sb.w / 2, sb.y + sb.h / 2, "#ffffff", 10, 160)
+              if (sb.bounces > sb.maxBounces) {
+                spawnParticles(sb.x + sb.w / 2, sb.y + sb.h / 2, "#b3ecff", 22, 260)
+                snowballs.splice(i, 1)
+                continue
+              }
+            }
+
+            // Sweep other enemies!
+            for (let j = enemies.length - 1; j >= 0; j--) {
+              const target = enemies[j]
+              if (rectsOverlap(sb, target)) {
+                sb.combo++
+                const pts = 500 * sb.combo
+                score += pts
+                if (score > highScore) highScore = score
+                AudioSys.enemyPop()
+                hitStop = 0.035
+                screenShake = 7
+                spawnParticles(target.x + target.w / 2, target.y + target.h / 2, "#ff6b6b", 18, 250)
+                addFloatingText(target.x, target.y - 10, `+${pts}`, sb.combo > 1 ? "#ff922b" : "#ffe066")
+                spawnItem(target.x, target.y)
+                enemies.splice(j, 1)
+              }
+            }
+
+            // Award base points for the kicked enemy itself on first frame
+            if (sb.combo === 0) {
+              sb.combo = 1
+              score += 500
+              if (score > highScore) highScore = score
+              addFloatingText(sb.x, sb.y - 12, "+500", "#74c0fc")
+              spawnItem(sb.x, sb.y)
+            }
+          }
+
+          // --- ITEMS / POWERUPS UPDATE ---
+          for (let i = items.length - 1; i >= 0; i--) {
+            const it = items[i]
+            it.life -= dt
+            it.vx *= 0.94
+            moveEntity(it, dt)
+
+            if (rectsOverlap(player, it)) {
+              AudioSys.pickup()
+              if (it.kind === "red_potion") {
+                player.speedBonus = Math.min(2, player.speedBonus + 1)
+                score += 1000
+                addFloatingText(it.x, it.y - 10, "SPEED UP! +1000", "#ff6b6b")
+              } else if (it.kind === "blue_potion") {
+                player.powerBonus = Math.min(2, player.powerBonus + 1)
+                score += 1000
+                addFloatingText(it.x, it.y - 10, "SNOW POWER! +1000", "#4dabf7")
+              } else if (it.kind === "yellow_potion") {
+                player.rangeBonus = Math.min(2, player.rangeBonus + 1)
+                score += 1000
+                addFloatingText(it.x, it.y - 10, "LONG SHOT! +1000", "#ffd43b")
+              } else {
+                score += 1500
+                addFloatingText(it.x, it.y - 10, "+1500", "#69db7c")
+              }
+              if (score > highScore) highScore = score
+              spawnParticles(it.x + 14, it.y + 14, "#ffe066", 12, 140)
+              items.splice(i, 1)
+              continue
+            }
+
+            if (it.life <= 0) {
+              items.splice(i, 1)
+            }
+          }
+
+          updateParticles(dt)
+
+          // --- CHECK WIN CONDITION ---
+          if (enemies.length === 0 && snowballs.length === 0) {
+            clearDelay += dt
+            if (clearDelay > 0.7) {
+              const timeBonus = Math.ceil(stageTimer) * 100
+              score += timeBonus
+              if (score > highScore) highScore = score
+              state = "STAGE_CLEAR"
+              AudioSys.stageClear()
+            }
+          } else {
+            clearDelay = 0
+          }
+        }
+
+        function damagePlayer() {
+          player.lives--
+          AudioSys.hurt()
+          screenShake = 10
+          spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#74c0fc", 24, 240)
+          if (player.lives <= 0) {
+            state = "GAME_OVER"
+          } else {
+            player.x = W / 2 - 18
+            player.y = H - TILE - 44
+            player.vx = 0
+            player.vy = 0
+            player.invuln = 2.5
+          }
+        }
+
+        function updateParticles(dt) {
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i]
+            p.life -= dt
+            p.vy += 450 * dt
+            p.x += p.vx * dt
+            p.y += p.vy * dt
+            if (p.life <= 0) particles.splice(i, 1)
+          }
+          for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i]
+            ft.life -= dt
+            ft.y -= 36 * dt
+            if (ft.life <= 0) floatingTexts.splice(i, 1)
+          }
+        }
+
+        // ==========================================
+        // 7. RENDERING (RETRO ARCADE PIXEL ART STYLE)
+        // ==========================================
+        function drawBackground() {
+          // Rich deep castle-night gradient
+          const grad = ctx.createLinearGradient(0, 0, 0, H)
+          grad.addColorStop(0, "#0f1c38")
+          grad.addColorStop(0.5, "#172a4f")
+          grad.addColorStop(1, "#0d172e")
+          ctx.fillStyle = grad
+          ctx.fillRect(0, 0, W, H)
+
+          // Decorative icy castle arches in background
+          ctx.strokeStyle = "rgba(116, 192, 252, 0.08)"
+          ctx.lineWidth = 4
+          for (let x = 96; x < W - 96; x += 192) {
+            ctx.beginPath()
+            ctx.arc(x + 48, 220, 64, Math.PI, 0)
+            ctx.lineTo(x + 112, H - 48)
+            ctx.moveTo(x - 16, 220)
+            ctx.lineTo(x - 16, H - 48)
+            ctx.stroke()
+          }
+
+          // Falling snow particles
+          ctx.fillStyle = "rgba(255, 255, 255, 0.5)"
+          for (const s of bgSnow) {
+            ctx.beginPath()
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+            ctx.fill()
+          }
+        }
+
+        function drawLevel() {
+          for (let r = 0; r < 13; r++) {
+            for (let c = 0; c < 16; c++) {
+              const ch = LEVEL_MAP[r][c]
+              const x = c * TILE
+              const y = r * TILE
+
+              if (ch === "#") {
+                // Stone brick wall/floor with icy top trim
+                ctx.fillStyle = "#2b3a59"
+                ctx.fillRect(x, y, TILE, TILE)
+
+                ctx.fillStyle = "#3b4f78"
+                ctx.fillRect(x + 2, y + 2, TILE - 4, TILE / 2 - 3)
+                ctx.fillRect(x + 2, y + TILE / 2 + 1, TILE / 2 - 3, TILE / 2 - 3)
+                ctx.fillRect(x + TILE / 2 + 1, y + TILE / 2 + 1, TILE / 2 - 3, TILE / 2 - 3)
+
+                // Snow cap on floor tiles
+                if (r === 12) {
+                  ctx.fillStyle = "#e7f5ff"
+                  ctx.fillRect(x, y, TILE, 7)
+                  ctx.fillStyle = "#74c0fc"
+                  ctx.fillRect(x, y + 7, TILE, 3)
+                }
+              } else if (ch === "=") {
+                // Classic Snow Bros icy platform
+                ctx.fillStyle = "#1c7ed6"
+                ctx.fillRect(x, y + 4, TILE, 14)
+                ctx.fillStyle = "#74c0fc"
+                ctx.fillRect(x, y + 2, TILE, 6)
+                ctx.fillStyle = "#ffffff"
+                ctx.fillRect(x, y, TILE, 4)
+
+                // Small icicles underneath
+                ctx.fillStyle = "#a5d8ff"
+                ctx.beginPath()
+                ctx.moveTo(x + 8, y + 18)
+                ctx.lineTo(x + 14, y + 18)
+                ctx.lineTo(x + 11, y + 25)
+                ctx.moveTo(x + 30, y + 18)
+                ctx.lineTo(x + 38, y + 18)
+                ctx.lineTo(x + 34, y + 27)
+                ctx.fill()
+              }
+            }
+          }
+        }
+
+        function drawPlayer() {
+          if (player.invuln > 0 && Math.floor(player.invuln * 16) % 2 === 0) return
+
+          const px = Math.round(player.x)
+          const py = Math.round(player.y)
+          const bob = player.grounded && Math.abs(player.vx) > 10 ? Math.sin(player.animTimer) * 2.5 : 0
+
+          ctx.save()
+          ctx.translate(px + player.w / 2, py + player.h / 2 + bob)
+          ctx.scale(player.facing, 1)
+
+          // Classic Nick (Snowman hero in blue overalls & red cap/scarf)
+          // Feet
+          const stride = player.grounded && Math.abs(player.vx) > 10 ? Math.sin(player.animTimer) * 5 : 0
+          ctx.fillStyle = "#1864ab"
+          ctx.beginPath()
+          ctx.roundRect(-13 + stride, 13, 11, 9, 4)
+          ctx.roundRect(2 - stride, 13, 11, 9, 4)
+          ctx.fill()
+
+          // Snowman Round Body + Blue Overalls
+          ctx.fillStyle = "#ffffff"
+          ctx.beginPath()
+          ctx.arc(0, 4, 15, 0, Math.PI * 2)
+          ctx.fill()
+
+          ctx.fillStyle = "#228be6"
+          ctx.beginPath()
+          ctx.arc(0, 6, 14, 0.1 * Math.PI, 0.9 * Math.PI)
+          ctx.fill()
+          // Overall straps
+          ctx.fillRect(-9, -4, 4, 10)
+          ctx.fillRect(5, -4, 4, 10)
+          // Gold buttons
+          ctx.fillStyle = "#ffd43b"
+          ctx.fillRect(-8, 3, 2, 2)
+          ctx.fillRect(6, 3, 2, 2)
+
+          // Red Scarf
+          ctx.fillStyle = "#fa5252"
+          ctx.fillRect(-12, -6, 24, 5)
+          ctx.fillRect(-15, -5, 6, 12)
+
+          // Head
+          ctx.fillStyle = "#ffffff"
+          ctx.beginPath()
+          ctx.arc(0, -13, 12, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Cute Eyes & Carrot/Rosy Nose
+          ctx.fillStyle = "#111"
+          ctx.fillRect(4, -16, 3, 4)
+          ctx.fillStyle = "#ff922b"
+          ctx.beginPath()
+          ctx.moveTo(10, -13)
+          ctx.lineTo(17, -11)
+          ctx.lineTo(10, -9)
+          ctx.fill()
+
+          // Blue/Red Beanie Hat
+          ctx.fillStyle = "#1971c2"
+          ctx.beginPath()
+          ctx.arc(0, -17, 11, Math.PI, 0)
+          ctx.fill()
+          ctx.fillStyle = "#ffd43b"
+          ctx.beginPath()
+          ctx.arc(-4, -27, 4, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Arm / Kick animation
+          if (player.kickAnim > 0) {
+            ctx.fillStyle = "#1864ab"
+            ctx.fillRect(10, 6, 14, 8)
+          } else {
+            ctx.fillStyle = "#ffffff"
+            ctx.beginPath()
+            ctx.arc(9, 2, 5, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          ctx.restore()
+        }
+
+        function drawEnemies() {
+          for (const en of enemies) {
+            const ex = Math.round(en.x)
+            const ey = Math.round(en.y)
+
+            ctx.save()
+            ctx.translate(ex + en.w / 2, ey + en.h / 2)
+
+            // Draw monster body
+            ctx.save()
+            ctx.scale(en.facing, 1)
+            const squash = Math.sin(en.anim) * 1.8
+
+            if (en.type === "demon") {
+              // Classic Red Horned Goblin
+              ctx.fillStyle = "#fa5252"
+              ctx.beginPath()
+              ctx.roundRect(-16, -15 + squash, 32, 34 - squash, 10)
+              ctx.fill()
+              // Horns
+              ctx.fillStyle = "#ffd43b"
+              ctx.beginPath()
+              ctx.moveTo(-10, -14)
+              ctx.lineTo(-14, -24)
+              ctx.lineTo(-4, -15)
+              ctx.moveTo(4, -15)
+              ctx.lineTo(12, -24)
+              ctx.lineTo(10, -14)
+              ctx.fill()
+            } else if (en.type === "jumper") {
+              // Green Hopper Frog-Monster
+              ctx.fillStyle = "#40c057"
+              ctx.beginPath()
+              ctx.roundRect(-17, -13 + squash, 34, 32 - squash, 12)
+              ctx.fill()
+              ctx.fillStyle = "#b2f2bb"
+              ctx.beginPath()
+              ctx.arc(2, 4, 10, 0, Math.PI * 2)
+              ctx.fill()
+            } else {
+              // Purple Fire Spirit
+              ctx.fillStyle = "#9775fa"
+              ctx.beginPath()
+              ctx.roundRect(-16, -16 + squash, 32, 35 - squash, 11)
+              ctx.fill()
+              ctx.fillStyle = "#ff922b"
+              ctx.beginPath()
+              ctx.arc(0, -18, 6, 0, Math.PI * 2)
+              ctx.fill()
+            }
+
+            // Angry Eyes & Mouth
+            ctx.fillStyle = "#fff"
+            ctx.fillRect(2, -9, 7, 7)
+            ctx.fillStyle = "#000"
+            ctx.fillRect(5, -7, 3, 4)
+            ctx.fillStyle = "#fff"
+            ctx.fillRect(1, 3, 10, 4)
+            ctx.restore()
+
+            // Overlay Snow Encasement based on snowLevel (1 to 4)
+            if (en.snowLevel > 0) {
+              const ratio = en.snowLevel / 4
+              const radius = 12 + ratio * 11
+              const yOffset = 18 - radius
+
+              ctx.fillStyle = en.snowLevel === 4 ? "#e7f5ff" : "rgba(231, 245, 255, 0.88)"
+              ctx.beginPath()
+              ctx.arc(0, yOffset, radius, 0, Math.PI * 2)
+              ctx.fill()
+
+              ctx.strokeStyle = "#74c0fc"
+              ctx.lineWidth = 2.5
+              ctx.stroke()
+
+              // Highlight shine on snowball
+              ctx.fillStyle = "#ffffff"
+              ctx.beginPath()
+              ctx.arc(-radius * 0.35, yOffset - radius * 0.35, radius * 0.25, 0, Math.PI * 2)
+              ctx.fill()
+
+              // Flashing warning when about to thaw
+              if (en.thawTimer < 1.0 && Math.floor(en.thawTimer * 12) % 2 === 0) {
+                ctx.strokeStyle = "#ff6b6b"
+                ctx.stroke()
+              }
+            }
+
+            ctx.restore()
+          }
+        }
+
+        function drawSnowballs() {
+          for (const sb of snowballs) {
+            const cx = sb.x + sb.w / 2
+            const cy = sb.y + sb.h / 2
+            ctx.save()
+            ctx.translate(cx, cy)
+            ctx.rotate(sb.spin)
+
+            // Rolling giant snowball
+            ctx.fillStyle = "#e7f5ff"
+            ctx.beginPath()
+            ctx.arc(0, 0, 22, 0, Math.PI * 2)
+            ctx.fill()
+
+            ctx.strokeStyle = "#339af0"
+            ctx.lineWidth = 3
+            ctx.stroke()
+
+            // Inner swirl lines to show rapid rolling
+            ctx.strokeStyle = "#74c0fc"
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.arc(0, 0, 12, 0.2, 2.2)
+            ctx.moveTo(-10, -8)
+            ctx.lineTo(8, 10)
+            ctx.stroke()
+
+            ctx.restore()
+          }
+        }
+
+        function drawProjectiles() {
+          for (const p of projectiles) {
+            ctx.fillStyle = "#ffffff"
+            ctx.beginPath()
+            ctx.arc(p.x + p.w / 2, p.y + p.h / 2, p.w / 2, 0, Math.PI * 2)
+            ctx.fill()
+
+            ctx.fillStyle = "#a5d8ff"
+            ctx.beginPath()
+            ctx.arc(p.x + p.w / 2 - 3, p.y + p.h / 2 + 2, p.w / 3, 0, Math.PI * 2)
+            ctx.fill()
+          }
+        }
+
+        function drawItems() {
+          for (const it of items) {
+            if (it.life < 2.0 && Math.floor(it.life * 10) % 2 === 0) continue
+            const cx = it.x + it.w / 2
+            const cy = it.y + it.h / 2
+
+            ctx.save()
+            ctx.translate(cx, cy)
+
+            if (it.kind.includes("potion")) {
+              // Arcade Potion Bottle
+              ctx.fillStyle = it.kind === "red_potion" ? "#ff6b6b" : it.kind === "blue_potion" ? "#339af0" : "#fcc419"
+              ctx.beginPath()
+              ctx.arc(0, 3, 11, 0, Math.PI * 2)
+              ctx.fill()
+              ctx.fillStyle = "#fff"
+              ctx.fillRect(-4, -12, 8, 6)
+              ctx.fillStyle = "#d9480f"
+              ctx.fillRect(-3, -15, 6, 3)
+            } else {
+              // Delicious Strawberry Cake Slice (Bonus Points)
+              ctx.fillStyle = "#fff3bf"
+              ctx.beginPath()
+              ctx.moveTo(-12, 10)
+              ctx.lineTo(12, 10)
+              ctx.lineTo(12, -4)
+              ctx.lineTo(-12, 2)
+              ctx.closePath()
+              ctx.fill()
+              ctx.fillStyle = "#ff6b6b"
+              ctx.fillRect(-12, 2, 24, 3)
+              ctx.beginPath()
+              ctx.arc(2, -6, 4, 0, Math.PI * 2)
+              ctx.fill()
+            }
+            ctx.restore()
+          }
+        }
+
+        function drawParticles() {
+          for (const p of particles) {
+            ctx.globalAlpha = Math.max(0, p.life / p.maxLife)
+            ctx.fillStyle = p.color
+            ctx.beginPath()
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+            ctx.fill()
+          }
+          ctx.globalAlpha = 1
+
+          ctx.font = 'bold 16px "Courier New", monospace'
+          ctx.textAlign = "center"
+          for (const ft of floatingTexts) {
+            ctx.fillStyle = "#000"
+            ctx.fillText(ft.text, ft.x + 17, ft.y + 1)
+            ctx.fillStyle = ft.color
+            ctx.fillText(ft.text, ft.x + 16, ft.y)
+          }
+        }
+
+        function drawHUD() {
+          // Top Arcade Status Bar
+          ctx.fillStyle = "rgba(7, 11, 20, 0.78)"
+          ctx.fillRect(0, 0, W, 42)
+
+          ctx.font = 'bold 18px "Courier New", monospace'
+          ctx.textAlign = "left"
+          ctx.fillStyle = "#74c0fc"
+          ctx.fillText(`1UP: ${String(score).padStart(6, "0")}`, 20, 27)
+
+          ctx.textAlign = "center"
+          ctx.fillStyle = "#ffd43b"
+          ctx.fillText(`HIGH: ${String(highScore).padStart(6, "0")}`, W / 2 - 45, 27)
+
+          // Timer warning in red when under 15 seconds
+          ctx.fillStyle = stageTimer <= 15 ? "#ff6b6b" : "#69db7c"
+          ctx.fillText(`TIME: ${Math.ceil(stageTimer)}s`, W / 2 + 125, 27)
+
+          // Lives indicator
+          ctx.textAlign = "right"
+          ctx.fillStyle = "#fff"
+          const hearts = player ? "❤️".repeat(Math.max(0, player.lives)) : "❤️❤️❤️"
+          ctx.fillText(`FLOOR 1  ${hearts}`, W - 20, 27)
+        }
+
+        function drawOverlayScreen(title, subtitle, sub2, accentColor) {
+          ctx.fillStyle = "rgba(7, 12, 24, 0.82)"
+          ctx.fillRect(0, 0, W, H)
+
+          // Snow Bros style retro banner box
+          ctx.fillStyle = "#162440"
+          ctx.strokeStyle = accentColor
+          ctx.lineWidth = 4
+          ctx.beginPath()
+          ctx.roundRect(W / 2 - 260, H / 2 - 140, 520, 280, 16)
+          ctx.fill()
+          ctx.stroke()
+
+          ctx.textAlign = "center"
+          ctx.font = 'bold 44px "Courier New", monospace'
+          ctx.fillStyle = "#000"
+          ctx.fillText(title, W / 2 + 3, H / 2 - 52)
+          ctx.fillStyle = accentColor
+          ctx.fillText(title, W / 2, H / 2 - 55)
+
+          ctx.font = 'bold 20px "Courier New", monospace'
+          ctx.fillStyle = "#e7f5ff"
+          ctx.fillText(subtitle, W / 2, H / 2 + 5)
+
+          if (sub2) {
+            ctx.font = '16px "Courier New", monospace'
+            ctx.fillStyle = "#a5d8ff"
+            ctx.fillText(sub2, W / 2, H / 2 + 45)
+          }
+
+          if (Math.floor(Date.now() / 450) % 2 === 0) {
+            ctx.font = 'bold 22px "Courier New", monospace'
+            ctx.fillStyle = "#ffd43b"
+            ctx.fillText("ПРИТИСНИ [SPACE] ЗА СТАРТ", W / 2, H / 2 + 102)
+          }
+        }
+
+        function render() {
+          ctx.save()
+          if (screenShake > 0) {
+            const dx = (Math.random() - 0.5) * screenShake * 2
+            const dy = (Math.random() - 0.5) * screenShake * 2
+            ctx.translate(dx, dy)
+          }
+
+          drawBackground()
+          drawLevel()
+
+          if (state === "PLAYING" || state === "STAGE_CLEAR" || state === "GAME_OVER") {
+            drawItems()
+            drawProjectiles()
+            drawEnemies()
+            drawSnowballs()
+            if (player) drawPlayer()
+            drawParticles()
+          }
+
+          drawHUD()
+
+          if (state === "TITLE") {
+            drawOverlayScreen("SNOW BROS", "ARCADE 1-MINUTE CHALLENGE", "Замрзни ги сите чудовишта и шутни ги топките!", "#4dabf7")
+          } else if (state === "STAGE_CLEAR") {
+            drawOverlayScreen("STAGE CLEAR!", `ВКУПНО ПОЕНИ: ${score}`, "Одлично изиграно! Ги исчисти сите на нивото.", "#69db7c")
+          } else if (state === "GAME_OVER") {
+            drawOverlayScreen("GAME OVER", `ОСВОЕНИ ПОЕНИ: ${score}`, "Времето истече или ги изгуби животите.", "#ff6b6b")
+          }
+
+          ctx.restore()
+        }
+
+        // ==========================================
+        // 8. MAIN FIXED-STEP GAME LOOP
+        // ==========================================
+        let lastTime = performance.now()
+        function gameLoop(now) {
+          const dt = Math.min(0.05, (now - lastTime) / 1000)
+          lastTime = now
+
+          update(dt)
+          render()
+
+          // Clear edge-triggered inputs
+          for (const k in justPressed) {
+            delete justPressed[k]
+          }
+
+          requestAnimationFrame(gameLoop)
+        }
+
+        requestAnimationFrame(gameLoop)
+      })()
+    </script>
+  </body>
+</html>
