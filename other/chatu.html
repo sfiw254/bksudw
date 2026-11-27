@@ -25,13 +25,61 @@
           height: 76px;
         }
       }
+
+      #backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9;
+      }
+
+      body:has(.cam.zoomed) #backdrop {
+        display: block;
+      }
+
+      .cam.zoomed {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        background: #fff;
+      }
+
+      .cam.zoomed img {
+        width: 80vw;
+        height: auto;
+        max-height: 85vh;
+        object-fit: contain;
+      }
+
+      @media (max-width: 768px) {
+        .cam.zoomed img {
+          width: 96vw;
+        }
+      }
+
+      .cam.zoomed img {
+        width: auto;
+        height: auto;
+        max-width: 80vw;
+        max-height: 85vh;
+      }
+      @media (max-width: 768px) {
+        .cam.zoomed img {
+          max-width: 96vw;
+        }
+      }
     </style>
   </head>
 
   <body>
     <input />
     <button id="add" onclick="clickAdd()">Add</button>
+    <button id="refresh" onclick="clickRefresh()">Refresh</button>
     <div class="content"></div>
+    <div id="backdrop" onclick="unzoom()"></div>
     <script>
       let users, followed
       let refreshTimeout, refreshInterval
@@ -92,7 +140,12 @@
       }
 
       function imgClick(user) {
-        window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
+        const cam = document.getElementById(user)
+        if (cam.classList.contains("zoomed")) {
+          window.open("https://chaturbate.com/" + user, "_blank", "noopener,noreferrer")
+        } else {
+          cam.classList.add("zoomed")
+        }
       }
 
       function imgOver(user) {
@@ -111,6 +164,7 @@
       }
 
       function imgOut(user) {
+        if (document.querySelector(".cam.zoomed")) return
         clearTimeout(refreshTimeout)
         clearInterval(refreshInterval)
       }
@@ -147,6 +201,18 @@
             updateBin()
           }
         }
+      }
+
+      function clickRefresh() {
+        document.querySelectorAll("img").forEach((el) => {
+          el.src = el.src.split("f=")[0] + "f=" + Math.random()
+        })
+      }
+
+      function unzoom() {
+        document.querySelector(".cam.zoomed")?.classList.remove("zoomed")
+        document.getElementById("backdrop").classList.add("hide")
+        imgOut()
       }
 
       function updateBin() {
