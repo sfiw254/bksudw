@@ -12,11 +12,11 @@ app.get("/termini/slots", (req, res) => routeSlots(req, res))
 app.get("/termini/sub", (req, res) => routeSub(req, res))
 app.get("/termini/unsub", (req, res) => routeUnsub(req, res))
 
-// Log heap memory in MB every x seconds
-setInterval(() => {
-  const usedMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
-  console.log(`Memory: ${usedMB} MB`)
-}, 60000).unref() // .unref() lets Node exit cleanly if the main loop stops
+// // Log heap memory in MB every x seconds
+// setInterval(() => {
+//   const usedMB = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
+//   console.log(`Memory: ${usedMB} MB`)
+// }, 60000).unref() // .unref() lets Node exit cleanly if the main loop stops
 
 app.listen(3000, () => {
   console.log(`Server is running on port 3000...`)
