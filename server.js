@@ -510,7 +510,7 @@ app.get("/chatu", (req, res) => routeChatu(req, res))
 
 readFollowed()
 checkFollowed()
-setInterval(checkFollowed, 1000 * 5)
+setInterval(checkFollowed, 1000 * 60)
 
 function routeChatu(req, res) {
   try {
