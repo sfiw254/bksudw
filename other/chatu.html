@@ -211,6 +211,10 @@
           body: JSON.stringify(users)
         }).then((res) => window.location.reload())
       }
+
+      document.addEventListener("keydown", (e) => e.key === "Escape" && unzoom())
+      // document.addEventListener("dblclick", (e) => console.log(e.target))
+      // document.addEventListener("dblclick", (e) => e.target.tagName === "IMG" && console.log("Double-clicked image:", e.target.src))
     </script>
   </body>
 </html>
